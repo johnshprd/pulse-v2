@@ -305,7 +305,7 @@ async function handleForgot() {
   var email = document.getElementById('login-email').value.trim();
   if (!email) { setMsg('Enter your email above first.', 'error'); return; }
   var result = await db.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://mpspulse.app/auth.html'
+    redirectTo: 'https://johnshprd.github.io/pulse-v2/auth.html'
   });
   if (result.error) { setMsg(result.error.message, 'error'); }
   else { setMsg('Password reset email sent. Check your inbox.', 'success'); }
@@ -314,7 +314,7 @@ async function handleForgot() {
 async function handleGoogle() {
   await db.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'https://YOUR-NEW-DOMAIN/dashboard.html' }
+    options: { redirectTo: 'https://johnshprd.github.io/pulse-v2/dashboard.html' }
   });
 }
 
