@@ -210,6 +210,13 @@
       <label class="field-label">Time logged</label>
       <div class="field-input"><input type="time" id="editItemTime"></div>
     </div>
+    <div class="field">
+      <label class="field-label">Notes</label>
+      <div class="field-input" style="align-items:flex-start;">
+        <textarea id="editItemNotes" rows="2" placeholder="e.g. 100g = roughly 2 large eggs" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
+      </div>
+      <div style="font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-top:4px; line-height:1.3;">Saved against "<span id="editItemNotesFoodName">this food</span>" — you'll see it again next time you log it.</div>
+    </div>
     <button class="btn-confirm" id="saveEditItemBtn">Save changes →</button>
     <button id="deleteEditItemBtn" style="width:100%; background:none; border:none; color:#dc2626; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; padding:12px; cursor:pointer;">Delete this entry</button>
   </div>
@@ -316,6 +323,7 @@
     <div class="portion-step" id="stepPortion">
       <button class="btn-back" id="backToSearch">← Back to search</button>
       <div class="portion-food-name" id="portionFoodName">—</div>
+      <div id="portionFoodNote" style="font-family:'DM Sans',sans-serif; font-size:0.78rem; color:var(--g1); font-style:italic; margin:-4px 0 8px;"></div>
       <div class="portion-field">
         <input type="number" id="portionGrams" inputmode="decimal">
         <span class="unit">g</span>
@@ -369,6 +377,7 @@ let state = {
   slots: [[],[],[],[]],
   customFoods: [],
   favourites: [],
+  foodNotes: {}, // { "eggs": "100g = roughly 2 large eggs" } — keyed by lowercase name
 };
 let pendingFood = null;
 let pendingSlot = 0;
@@ -568,6 +577,7 @@ async function init(){
     state.slots = data.slots || [[],[],[],[]];
     state.customFoods = data.custom_foods || [];
     state.favourites = data.favourites || [];
+    state.foodNotes = data.food_notes || {};
   } else {
     state.slotTargets = distributeGoal(state.goal);
   }
@@ -581,7 +591,7 @@ async function saveUserData(){
   const today = new Date().toISOString().slice(0,10);
   await db.from('user_data').upsert({
     user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets,
-    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites,
+    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
 }
@@ -651,6 +661,7 @@ function render(){
               <div style="flex:1; min-width:0;">
                 <div class="logged-name">${item.name}</div>
                 <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); letter-spacing:0.5px; margin-top:1px;">Logged at ${new Date(item.loggedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
+                ${state.foodNotes[item.name.toLowerCase()] ? `<div style="font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--g1); margin-top:2px; font-style:italic;">📝 ${state.foodNotes[item.name.toLowerCase()]}</div>` : ''}
               </div>
               <div class="logged-protein">${item.protein}g</div>
               <span style="color:var(--muted); font-size:0.85rem; margin-left:2px;">✎</span>
@@ -703,6 +714,9 @@ function openEditItem(slotIdx, itemIdx){
   const hh = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
   document.getElementById('editItemTime').value = `${hh}:${mm}`;
 
+  document.getElementById('editItemNotesFoodName').textContent = item.name;
+  document.getElementById('editItemNotes').value = state.foodNotes[item.name.toLowerCase()] || '';
+
   document.getElementById('editItemBackdrop').classList.add('open');
   document.getElementById('editItemSheet').classList.add('open');
 }
@@ -736,6 +750,10 @@ function saveEditItem(){
     d.setHours(h,m,0,0);
     loggedAt = d.toISOString();
   }
+
+  const noteVal = document.getElementById('editItemNotes').value.trim();
+  if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
+  else delete state.foodNotes[name.toLowerCase()];
 
   state.slots[editingSlot][editingIdx] = { ...item, name, grams, protein, loggedAt };
   saveUserData();
@@ -869,6 +887,8 @@ function selectFood(id, isUsda){
   if (!pendingFood) return;
   showStep('stepPortion', 'Confirm portion');
   document.getElementById('portionFoodName').textContent = pendingFood.icon+' '+pendingFood.name;
+  const existingNote = state.foodNotes[pendingFood.name.toLowerCase()];
+  document.getElementById('portionFoodNote').textContent = existingNote ? '📝 '+existingNote : '';
   document.getElementById('portionGrams').value = pendingFood.typical;
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = false;
@@ -1031,6 +1051,8 @@ function selectFavourite(id){
   pendingFood = fav;
   showStep('stepPortion', 'Confirm portion');
   document.getElementById('portionFoodName').textContent = fav.icon+' '+fav.name;
+  const existingNote = state.foodNotes[fav.name.toLowerCase()];
+  document.getElementById('portionFoodNote').textContent = existingNote ? '📝 '+existingNote : '';
   document.getElementById('portionGrams').value = fav.typical;
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = true; // already a favourite
