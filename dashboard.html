@@ -370,6 +370,13 @@
       <div id="mockItemsList"></div>
       <button class="add-missed-btn" id="addMissedItemBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">+ Add missed item</button>
       <div class="pulse-select" id="pulseSelectScan" style="margin:14px 0;"></div>
+      <span class="log-time-toggle" id="scanTimeToggle" style="font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted2); cursor:pointer; letter-spacing:0.5px; display:inline-block; margin:2px 0 8px;">🕐 LOGGING NOW · TAP TO BACKDATE</span>
+      <div id="scanTimePicker" style="display:none; gap:6px; align-items:center; margin-bottom:8px;">
+        <input type="time" id="scanTimeInput" style="font-family:'Space Mono',monospace; background:var(--surface2); border:1px solid var(--border2); color:var(--text); border-radius:6px; padding:7px 9px; font-size:0.76rem;">
+        <button onclick="setBackdateTime('scanTimeToggle','scanTimePicker','scanTimeInput')" style="background:var(--g1); border:none; color:#fff; border-radius:6px; padding:7px 11px; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:1px; cursor:pointer;">SET</button>
+        <button onclick="clearBackdateTime('scanTimeToggle','scanTimePicker')" style="background:var(--surface); border:1px solid var(--border2); color:var(--muted); border-radius:6px; padding:7px 11px; font-family:'Space Mono',monospace; font-size:0.66rem; cursor:pointer;">✕</button>
+      </div>
+      <div id="scanTimeDecision"></div>
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;">
         <span style="font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase;">Total protein</span>
         <span id="scanTotalProtein" style="font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--g1);">0g</span>
@@ -585,12 +592,19 @@ function pulseRing(i, size){
   return ringSVG(mps.pct, size);
 }
 
+// Local-timezone date string (YYYY-MM-DD) — used for day-rollover so the log
+// resets at the user's actual midnight, not UTC midnight (matters during BST).
+function localDateString(d){
+  d = d || new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
 async function init(){
   const { data:{ session } } = await db.auth.getSession();
   if (!session){ window.location.href = 'auth.html'; return; }
   currentUser = session.user;
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateString();
   const { data } = await db.from('user_data').select('*').eq('user_id', currentUser.id).single();
   if (data){
     state.goal = data.goal || 150;
@@ -600,7 +614,7 @@ async function init(){
     state.foodNotes = data.food_notes || {};
     state.weekHistory = data.week_history || [0,0,0,0,0,0,0];
 
-    const storedDate = data.log_date ? new Date(data.log_date).toISOString().slice(0,10) : null;
+    const storedDate = data.log_date ? String(data.log_date).slice(0,10) : null;
     if (storedDate === today){
       // Same day — carry on with whatever's logged so far
       state.slots = data.slots || [[],[],[],[]];
@@ -633,7 +647,7 @@ function checkMidnight(){
 }
 
 async function saveUserData(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDateString();
   const { error } = await db.from('user_data').upsert({
     user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
@@ -982,13 +996,17 @@ function findOverlappingSlot(excludeIdx){
   return null;
 }
 
-function resolveLogTime(slotIdx, entry, decisionContainerId){
+// entries: array of {name,icon,grams,protein,id,p100} — loggedAt attached once resolved.
+// A single time decision applies to the whole batch (a scanned meal is one sitting).
+function resolveLogTime(slotIdx, entries, decisionContainerId){
+  if (!Array.isArray(entries)) entries = [entries];
+  const displayName = entries.length===1 ? entries[0].name : entries.length+' items';
   const existing = state.slots[slotIdx] || [];
   if (existing.length > 0){
     const firstTs = new Date(existing[0].loggedAt).getTime();
     const elapsed = Date.now() - firstTs;
     if (elapsed <= GRACE_WINDOW_MS){
-      finalizeLog(slotIdx, entry, firstTs);
+      finalizeLog(slotIdx, entries, firstTs);
       return;
     }
     // Outside grace window — show the KEEP / USE NOW decision inline
@@ -998,14 +1016,14 @@ function resolveLogTime(slotIdx, entry, decisionContainerId){
     container.innerHTML = `
       <div style="background:var(--surface2); border:1px solid var(--amber); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
         <div style="color:var(--amber); font-weight:700; font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:1px; margin-bottom:6px;">⏱ UPDATE PULSE TIME?</div>
-        <div style="color:var(--muted2); font-size:0.76rem; margin-bottom:10px; line-height:1.4;">${entry.name} is ready to log. Which time should this pulse use?</div>
+        <div style="color:var(--muted2); font-size:0.76rem; margin-bottom:10px; line-height:1.4;">${displayName} is ready to log. Which time should this pulse use?</div>
         <div style="display:flex; gap:8px;">
           <button id="keepTimeBtn" style="flex:1; background:var(--surface); border:1px solid var(--border2); color:var(--text); border-radius:8px; padding:9px; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:1px; cursor:pointer;">KEEP ${originalTime}</button>
           <button id="useNowBtn" style="flex:1; background:var(--g1); border:none; color:#fff; border-radius:8px; padding:9px; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:1px; cursor:pointer;">USE NOW (${nowTime})</button>
         </div>
       </div>`;
-    document.getElementById('keepTimeBtn').onclick = () => finalizeLog(slotIdx, entry, firstTs);
-    document.getElementById('useNowBtn').onclick = () => finalizeLog(slotIdx, entry, Date.now());
+    document.getElementById('keepTimeBtn').onclick = () => finalizeLog(slotIdx, entries, firstTs);
+    document.getElementById('useNowBtn').onclick = () => finalizeLog(slotIdx, entries, Date.now());
     return;
   }
 
@@ -1025,20 +1043,23 @@ function resolveLogTime(slotIdx, entry, decisionContainerId){
     document.getElementById('cancelOverlapBtn').onclick = () => { container.innerHTML = ''; };
     document.getElementById('logAnywayBtn').onclick = () => {
       const customTs = customTimestampFor(slotIdx);
-      finalizeLog(slotIdx, entry, customTs || Date.now());
+      finalizeLog(slotIdx, entries, customTs || Date.now());
     };
     return;
   }
 
   // No existing entries, no overlap — use a backdated time if one was set, else now
   const customTs = customTimestampFor(slotIdx);
-  finalizeLog(slotIdx, entry, customTs || Date.now());
+  finalizeLog(slotIdx, entries, customTs || Date.now());
 }
 
-function finalizeLog(slotIdx, entry, ts){
+function finalizeLog(slotIdx, entries, ts){
+  if (!Array.isArray(entries)) entries = [entries];
   delete customLogTime[slotIdx];
   if (!state.slots[slotIdx]) state.slots[slotIdx] = [];
-  state.slots[slotIdx].push({ ...entry, loggedAt: new Date(ts).toISOString() });
+  entries.forEach(entry => {
+    state.slots[slotIdx].push({ ...entry, loggedAt: new Date(ts).toISOString() });
+  });
   saveUserData();
   expandedSlot = slotIdx;
   closeSheet();
@@ -1150,6 +1171,8 @@ function startScan(fileInputEl){
     const url = URL.createObjectURL(file);
     document.getElementById('scanPhotoPreview').src = url;
     showStep('stepMealScan', 'Analysing meal…');
+    document.getElementById('scanTimeDecision').innerHTML = '';
+    buildBackdateToggle('scanTimeToggle','scanTimePicker','scanTimeInput');
     document.getElementById('mockItemsList').innerHTML = `<div class="empty-state">🔍 Analysing your photo…</div>`;
     document.getElementById('scanTotalProtein').textContent = '—';
 
@@ -1223,15 +1246,16 @@ function updateScanTotal(){
 }
 
 function confirmScan(){
-  if (!state.slots[pendingSlot]) state.slots[pendingSlot] = [];
-  scanItems.forEach(item => {
-    const name = item.name.trim() || 'Custom item';
-    state.slots[pendingSlot].push({ name, icon:item.icon, grams:item.grams, protein:round1(item.protein), id:'scan-'+Date.now()+'-'+Math.random(), loggedAt:new Date().toISOString(), p100: null });
-  });
-  saveUserData();
-  expandedSlot = pendingSlot;
-  closeSheet();
-  render();
+  const entries = scanItems.map(item => ({
+    name: item.name.trim() || 'Custom item',
+    icon: item.icon,
+    grams: item.grams,
+    protein: round1(item.protein),
+    id: 'scan-'+Date.now()+'-'+Math.random(),
+    p100: null,
+  }));
+  if (!entries.length) return;
+  resolveLogTime(pendingSlot, entries, 'scanTimeDecision');
 }
 
 // --- Wiring ---
