@@ -847,13 +847,18 @@ function saveEditItem(){
   if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
   else delete state.foodNotes[name.toLowerCase()];
 
-  // Favourite toggle — tick adds (or updates), untick removes
+  // Favourite toggle — tick adds or updates, untick removes
   const wantFav = document.getElementById('editItemSaveFav').checked;
   const existingFavIdx = state.favourites.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
-  if (wantFav && existingFavIdx === -1){
+  if (wantFav){
     const p100 = item.p100 || (grams > 0 ? round1((protein/grams)*100) : 0);
-    state.favourites.push({ id:'fav-'+Date.now(), name, icon: editingIcon, p100, typical: grams });
-  } else if (!wantFav && existingFavIdx !== -1){
+    if (existingFavIdx === -1){
+      state.favourites.push({ id:'fav-'+Date.now(), name, icon: editingIcon, p100, typical: grams });
+    } else {
+      // Already a favourite — sync its icon and details with this edit
+      state.favourites[existingFavIdx] = { ...state.favourites[existingFavIdx], name, icon: editingIcon, p100, typical: grams };
+    }
+  } else if (existingFavIdx !== -1){
     state.favourites.splice(existingFavIdx, 1);
   }
 
