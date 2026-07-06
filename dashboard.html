@@ -132,6 +132,11 @@
   .pulse-select{ display:flex; gap:8px; margin-bottom:16px; }
   .pulse-chip{ flex:1; text-align:center; padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:1px; color:var(--muted2); cursor:pointer; }
   .pulse-chip.active{ border-color:var(--g1); background:rgba(79,70,229,0.08); color:var(--g1); font-weight:700; }
+
+  .calc-option{ display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1.5px solid var(--border2); border-radius:10px; padding:11px 13px; font-family:'DM Sans',sans-serif; font-size:0.84rem; font-weight:600; color:var(--text); cursor:pointer; }
+  .calc-option span{ font-family:'Space Mono',monospace; font-size:0.64rem; color:var(--muted); letter-spacing:0.5px; font-weight:400; }
+  .calc-option.active{ border-color:var(--g1); background:rgba(79,70,229,0.08); }
+  .calc-option.active span{ color:var(--g1); }
   .btn-confirm{ background:var(--g1); color:#fff; border:none; border-radius:12px; width:100%; padding:14px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.92rem; cursor:pointer; }
   .btn-back{ background:none; border:none; color:var(--muted2); font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; margin-bottom:12px; padding:0; }
 
@@ -264,6 +269,35 @@
       <span class="unit">g / day</span>
     </div>
     <div id="goalError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; margin-bottom:12px; min-height:14px;"></div>
+
+    <button id="calcToggleBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">🧮 Not sure? Work it out for me</button>
+
+    <div id="goalCalculator" style="display:none; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:14px; margin-bottom:14px;">
+      <div class="field">
+        <label class="field-label">Your bodyweight</label>
+        <div style="display:flex; gap:8px;">
+          <div class="field-input" style="flex:1; background:var(--surface);"><input type="number" id="calcWeight" inputmode="decimal" placeholder="80"></div>
+          <div class="pulse-select" style="flex:1; margin:0;">
+            <div class="pulse-chip active" id="unitKg" onclick="setCalcUnit('kg')">KG</div>
+            <div class="pulse-chip" id="unitLbs" onclick="setCalcUnit('lbs')">LBS</div>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Your main aim</label>
+        <div style="display:flex; flex-direction:column; gap:6px;" id="calcAimRow">
+          <div class="calc-option active" data-mult="2.0" onclick="setCalcAim(this)">💪 Build muscle <span>2.0g / kg</span></div>
+          <div class="calc-option" data-mult="2.2" onclick="setCalcAim(this)">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
+          <div class="calc-option" data-mult="1.6" onclick="setCalcAim(this)">⚖️ Maintain / general health <span>1.6g / kg</span></div>
+        </div>
+      </div>
+      <div id="calcResult" style="display:none; text-align:center; padding:10px 0 4px;">
+        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Suggested daily goal</div>
+        <div style="font-family:'Bebas Neue',sans-serif; font-size:2.2rem; color:var(--g1);" id="calcResultVal">—</div>
+        <button id="useCalcBtn" style="background:var(--g1); border:none; color:#fff; border-radius:10px; padding:10px 20px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; margin-top:8px;">Use this goal</button>
+      </div>
+    </div>
+
     <button class="btn-confirm" id="confirmGoalBtn">Save goal →</button>
   </div>
 </div>
@@ -1315,6 +1349,7 @@ function confirmScan(){
 function openGoalSheet(){
   document.getElementById('goalInput').value = state.goal;
   document.getElementById('goalError').textContent = '';
+  document.getElementById('goalCalculator').style.display = 'none';
   document.getElementById('goalSheetBackdrop').classList.add('open');
   document.getElementById('goalSheet').classList.add('open');
 }
@@ -1322,6 +1357,49 @@ function closeGoalSheet(){
   document.getElementById('goalSheetBackdrop').classList.remove('open');
   document.getElementById('goalSheet').classList.remove('open');
 }
+// --- Goal calculator: bodyweight × multiplier based on aim ---
+// Multipliers reflect commonly cited sports-nutrition ranges: ~1.6g/kg for
+// maintenance, ~2.0g/kg for building muscle, ~2.2g/kg in a fat-loss phase
+// where preserving muscle matters most.
+let calcUnit = 'kg';
+let calcMult = 2.0;
+
+function setCalcUnit(u){
+  calcUnit = u;
+  document.getElementById('unitKg').classList.toggle('active', u==='kg');
+  document.getElementById('unitLbs').classList.toggle('active', u==='lbs');
+  updateCalcResult();
+}
+
+function setCalcAim(el){
+  document.querySelectorAll('#calcAimRow .calc-option').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  calcMult = parseFloat(el.dataset.mult);
+  updateCalcResult();
+}
+
+function updateCalcResult(){
+  const raw = parseFloat(document.getElementById('calcWeight').value) || 0;
+  const resultBox = document.getElementById('calcResult');
+  if (raw <= 0){ resultBox.style.display = 'none'; return; }
+  const kg = calcUnit === 'lbs' ? raw * 0.4536 : raw;
+  let suggested = Math.round(kg * calcMult);
+  suggested = Math.max(40, Math.min(400, suggested));
+  document.getElementById('calcResultVal').textContent = suggested + 'g';
+  resultBox.style.display = 'block';
+  resultBox.dataset.value = suggested;
+}
+
+document.getElementById('calcToggleBtn').onclick = () => {
+  const calc = document.getElementById('goalCalculator');
+  calc.style.display = calc.style.display === 'none' || !calc.style.display ? 'block' : 'none';
+};
+document.getElementById('calcWeight').oninput = updateCalcResult;
+document.getElementById('useCalcBtn').onclick = () => {
+  const v = document.getElementById('calcResult').dataset.value;
+  if (v){ document.getElementById('goalInput').value = v; document.getElementById('goalCalculator').style.display = 'none'; }
+};
+
 function saveGoal(){
   const v = parseInt(document.getElementById('goalInput').value);
   if (!v || v<40 || v>400){
