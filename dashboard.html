@@ -164,7 +164,10 @@
 <div id="app" style="display:none;">
   <div class="topbar">
     <div class="logo">PULSE</div>
-    <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button id="historyBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">📊</button>
+      <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
+    </div>
   </div>
 
   <div class="content">
@@ -219,6 +222,21 @@
     </div>
     <button class="btn-confirm" id="saveEditItemBtn">Save changes →</button>
     <button id="deleteEditItemBtn" style="width:100%; background:none; border:none; color:#dc2626; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; padding:12px; cursor:pointer;">Delete this entry</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="historySheetBackdrop"></div>
+<div class="sheet" id="historySheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">7-Day History</div>
+    <button class="sheet-close" id="historySheetClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div style="position:relative; height:90px; display:flex; align-items:flex-end; gap:8px; margin-bottom:10px;" id="historyBars"></div>
+    <div style="display:flex; gap:14px; font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); letter-spacing:0.5px;">
+      <span>🟢 GOAL HIT</span><span>🟠 PARTIAL</span><span>⚪ NONE</span>
+    </div>
   </div>
 </div>
 
@@ -378,6 +396,7 @@ let state = {
   customFoods: [],
   favourites: [],
   foodNotes: {}, // { "eggs": "100g = roughly 2 large eggs" } — keyed by lowercase name
+  weekHistory: [0,0,0,0,0,0,0], // rolling 7-day totals, today is always index 6
 };
 let pendingFood = null;
 let pendingSlot = 0;
@@ -570,28 +589,53 @@ async function init(){
   if (!session){ window.location.href = 'auth.html'; return; }
   currentUser = session.user;
 
+  const today = new Date().toISOString().slice(0,10);
   const { data } = await db.from('user_data').select('*').eq('user_id', currentUser.id).single();
   if (data){
     state.goal = data.goal || 150;
     state.slotTargets = data.slot_targets || distributeGoal(state.goal);
-    state.slots = data.slots || [[],[],[],[]];
     state.customFoods = data.custom_foods || [];
     state.favourites = data.favourites || [];
     state.foodNotes = data.food_notes || {};
+    state.weekHistory = data.week_history || [0,0,0,0,0,0,0];
+
+    const storedDate = data.log_date ? new Date(data.log_date).toISOString().slice(0,10) : null;
+    if (storedDate === today){
+      // Same day — carry on with whatever's logged so far
+      state.slots = data.slots || [[],[],[],[]];
+    } else {
+      // Day has rolled over — bank yesterday's total into history, clear today's slots
+      state.weekHistory.shift();
+      state.weekHistory.push(0);
+      state.slots = [[],[],[],[]];
+      await saveUserData();
+    }
   } else {
     state.slotTargets = distributeGoal(state.goal);
   }
+
+  // If the app is left open across midnight, force a reload so the day
+  // actually rolls over rather than silently carrying yesterday's log forward.
+  localStorage.setItem('pulse_date', new Date().toDateString());
+  setInterval(checkMidnight, 60000);
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   render();
 }
 
+function checkMidnight(){
+  const stored = localStorage.getItem('pulse_date');
+  const todayStr = new Date().toDateString();
+  if (stored && stored !== todayStr){ window.location.reload(); }
+  localStorage.setItem('pulse_date', todayStr);
+}
+
 async function saveUserData(){
   const today = new Date().toISOString().slice(0,10);
   await db.from('user_data').upsert({
     user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets,
-    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes,
+    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
 }
@@ -599,6 +643,7 @@ async function saveUserData(){
 function render(){
   const active = activeSlotIndex();
   const dailyTotal = round1(state.slots.reduce((sum,slot)=>sum+slot.reduce((s,i)=>s+i.protein,0),0));
+  state.weekHistory[6] = dailyTotal; // today's running total always lives at index 6
 
   document.getElementById('goalVal').textContent = state.goal+'g';
   document.getElementById('dailyTotal').textContent = dailyTotal;
@@ -1208,6 +1253,45 @@ function saveGoal(){
   closeGoalSheet();
   render();
 }
+// --- 7-day history — ported classification logic from the live app ---
+function renderHistoryBars(){
+  const dayLabels = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+  const todayIdx = new Date().getDay(); // 0=Sunday
+  const off = todayIdx===0 ? 6 : todayIdx-1;
+  const reord = Array.from({length:7}, (_,i)=>({
+    label: dayLabels[(off-6+i+7)%7],
+    val: state.weekHistory[i],
+  }));
+  const mx = Math.max(...reord.map(d=>d.val), state.goal, 1);
+  const el = document.getElementById('historyBars');
+  el.innerHTML = reord.map((d,i) => {
+    const isToday = i===6;
+    const hit = d.val >= state.goal && d.val > 0;
+    const partial = !hit && d.val >= state.goal*0.5 && d.val > 0;
+    const color = hit ? 'var(--green)' : partial ? 'var(--amber)' : 'var(--border2)';
+    const h = d.val > 0 ? Math.max(4, Math.round((d.val/mx)*70)) : 4;
+    return `<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;">
+      <div style="width:100%; height:70px; display:flex; align-items:flex-end;">
+        <div style="width:100%; height:${h}px; background:${color}; border-radius:4px 4px 0 0; ${isToday?'box-shadow:0 0 0 2px var(--g1) inset;':''}"></div>
+      </div>
+      <span style="font-family:'Space Mono',monospace; font-size:0.56rem; color:${isToday?'var(--g1)':'var(--muted)'}; font-weight:${isToday?'700':'400'};">${d.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function openHistorySheet(){
+  renderHistoryBars();
+  document.getElementById('historySheetBackdrop').classList.add('open');
+  document.getElementById('historySheet').classList.add('open');
+}
+function closeHistorySheet(){
+  document.getElementById('historySheetBackdrop').classList.remove('open');
+  document.getElementById('historySheet').classList.remove('open');
+}
+document.getElementById('historyBtn').onclick = openHistorySheet;
+document.getElementById('historySheetClose').onclick = closeHistorySheet;
+document.getElementById('historySheetBackdrop').onclick = closeHistorySheet;
+
 document.getElementById('goalPill').onclick = openGoalSheet;
 document.getElementById('goalSheetClose').onclick = closeGoalSheet;
 document.getElementById('goalSheetBackdrop').onclick = closeGoalSheet;
