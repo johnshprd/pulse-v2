@@ -225,6 +225,9 @@
       </div>
       <div style="font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-top:4px; line-height:1.3;">Saved against "<span id="editItemNotesFoodName">this food</span>" — you'll see it again next time you log it.</div>
     </div>
+    <label style="display:flex; align-items:center; gap:8px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; cursor:pointer;">
+      <input type="checkbox" id="editItemSaveFav" style="width:16px; height:16px; accent-color:var(--g1);"> ⭐ Save as favourite for quick logging later
+    </label>
     <button class="btn-confirm" id="saveEditItemBtn">Save changes →</button>
     <button id="deleteEditItemBtn" style="width:100%; background:none; border:none; color:#dc2626; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; padding:12px; cursor:pointer;">Delete this entry</button>
   </div>
@@ -803,6 +806,7 @@ function openEditItem(slotIdx, itemIdx){
   document.getElementById('editItemTime').value = `${hh}:${mm}`;
 
   document.getElementById('editItemNotesFoodName').textContent = item.name;
+  document.getElementById('editItemSaveFav').checked = !!state.favourites.find(f => f.name.toLowerCase() === item.name.toLowerCase());
   document.getElementById('editItemNotes').value = state.foodNotes[item.name.toLowerCase()] || '';
 
   document.getElementById('editItemBackdrop').classList.add('open');
@@ -842,6 +846,16 @@ function saveEditItem(){
   const noteVal = document.getElementById('editItemNotes').value.trim();
   if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
   else delete state.foodNotes[name.toLowerCase()];
+
+  // Favourite toggle — tick adds (or updates), untick removes
+  const wantFav = document.getElementById('editItemSaveFav').checked;
+  const existingFavIdx = state.favourites.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
+  if (wantFav && existingFavIdx === -1){
+    const p100 = item.p100 || (grams > 0 ? round1((protein/grams)*100) : 0);
+    state.favourites.push({ id:'fav-'+Date.now(), name, icon: editingIcon, p100, typical: grams });
+  } else if (!wantFav && existingFavIdx !== -1){
+    state.favourites.splice(existingFavIdx, 1);
+  }
 
   state.slots[editingSlot][editingIdx] = { ...item, name, grams, protein, loggedAt, icon: editingIcon };
   saveUserData();
