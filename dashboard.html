@@ -469,8 +469,14 @@ function activeSlotIndex(){
     }
   });
   if (activeIdx !== null) return activeIdx;
+
+  // Nothing actively in progress — suggest a pulse that fits the time of day,
+  // but never one earlier than the first still-empty pulse (skip past completed ones).
+  const h = currentHour();
+  const timeSuggested = h < 11 ? 0 : h < 16 ? 1 : h < 20 ? 2 : 3;
   const firstEmpty = pulses.findIndex(p=>p.state==='empty');
-  return firstEmpty !== -1 ? firstEmpty : 3;
+  if (firstEmpty === -1) return 3;
+  return Math.max(firstEmpty, timeSuggested);
 }
 
 // Maps the real MPS state (empty/active/active-met/closed-met/closed-missed)
@@ -714,6 +720,7 @@ function render(){
   updateCoach();
 
   // Strip
+  const expandIdxForStrip = (typeof expandedSlot === 'number') ? expandedSlot : active;
   const stripEl = document.getElementById('strip');
   stripEl.innerHTML = '';
   for (let i=0;i<4;i++){
@@ -722,11 +729,13 @@ function render(){
     const target = state.slotTargets[i];
     const pct = target>0 ? Math.min(100,(total/target)*100) : 0;
     const seg = document.createElement('div');
-    seg.className = 'segment' + (i===active?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'');
+    seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'');
+    const mpsStatus = getMpsState(state.slots[i]||[]).status;
+    const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     seg.innerHTML = `
       <div class="seg-fill" style="height:${pct}%;"></div>
       <div class="seg-content">
-        <div class="seg-label">P${i+1}${i===active?' · Now':''}</div>
+        <div class="seg-label">P${i+1}${showNow?' · Now':''}</div>
         <div class="seg-pct">${total>0||status==='hit'?total+'g':'—'}${status==='hit'?' ✓':''}</div>
       </div>`;
     seg.onclick = () => { expandedSlot = i; render(); };
