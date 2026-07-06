@@ -57,9 +57,10 @@
   .segment.active .seg-pct{ color:var(--g1); }
 
   .expanded-card{ background:var(--surface); border:1.5px solid var(--g1); border-radius:16px; padding:16px; margin-bottom:12px; }
-  .expanded-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-  .expanded-title{ font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--text); letter-spacing:0.5px; }
-  .expanded-window{ font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted); letter-spacing:1px; }
+  .expanded-head{ display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+  .expanded-title{ font-family:'Bebas Neue',sans-serif; font-size:1.3rem; color:var(--text); letter-spacing:0.5px; line-height:1.15; }
+  .expanded-window-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .expanded-window{ font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted); letter-spacing:0.5px; line-height:1.4; flex:1; min-width:0; }
   .expanded-sub{ font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; }
   .expanded-sub b{ color:var(--g1); }
 
@@ -633,11 +634,15 @@ function checkMidnight(){
 
 async function saveUserData(){
   const today = new Date().toISOString().slice(0,10);
-  await db.from('user_data').upsert({
+  const { error } = await db.from('user_data').upsert({
     user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
+  if (error){
+    console.error('Save failed:', error);
+    alert('⚠️ Save failed: ' + error.message + '\n\nYour changes may not persist if you close the app. Check the browser console or ask Claude to debug this error message.');
+  }
 }
 
 function render(){
@@ -691,7 +696,7 @@ function render(){
       card.innerHTML = `
         <div class="expanded-head">
           <div class="expanded-title">PULSE ${i+1} · ${SLOT_NAMES[i].toUpperCase()}</div>
-          <div style="display:flex; align-items:center; gap:7px;">
+          <div class="expanded-window-row">
             <div class="expanded-window">${pulseWindowLabel(i)}</div>
             ${pulseRing(i, 22)}
           </div>
