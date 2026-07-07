@@ -23,6 +23,8 @@
   .loading-logo{ font-family:'Bebas Neue',sans-serif; font-size:2.2rem; letter-spacing:5px; color:var(--g1); }
 
   .topbar{ display:flex; align-items:center; justify-content:space-between; padding:14px 18px 12px; background:var(--surface); border-bottom:1px solid var(--border); }
+  .sticky-header{ position:sticky; top:0; z-index:40; background:var(--bg); }
+  .sticky-header .coach-bubble{ margin:12px 16px 14px; }
   .logo{ font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:4px; color:var(--g1); }
   .goal-pill{ display:flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid var(--border2); border-radius:18px; padding:5px 12px; }
   .goal-pill span:first-child{ font-family:'Space Mono',monospace; font-size:0.64rem; color:var(--muted); letter-spacing:1px; }
@@ -168,17 +170,18 @@
 <div id="loading"><div class="loading-logo">PULSE</div></div>
 
 <div id="app" style="display:none;">
-  <div class="topbar">
-    <div class="logo">PULSE</div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <button id="historyBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">📊</button>
-      <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
+  <div class="sticky-header">
+    <div class="topbar">
+      <div class="logo">PULSE</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button id="historyBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">📊</button>
+        <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
+      </div>
     </div>
+    <div class="coach-bubble"><p id="coachText">Loading your day…</p></div>
   </div>
 
   <div class="content">
-    <div class="coach-bubble"><p id="coachText">Loading your day…</p></div>
-
     <div class="daily-summary">
       <div class="daily-total"><span class="val" id="dailyTotal">0</span><span class="of">/ <span id="dailyGoalInline">0</span>g today</span></div>
       <div class="daily-left">LEFT<br><b id="dailyLeft">0g</b></div>
