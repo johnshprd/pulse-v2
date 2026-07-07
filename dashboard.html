@@ -952,6 +952,10 @@ function openSheet(slotIdx){
 function closeSheet(){
   document.getElementById('sheetBackdrop').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
+  ['portionTimeDecision','typeInTimeDecision','scanTimeDecision'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
 }
 
 function buildPulseSelect(containerId, onPick){
@@ -1116,8 +1120,8 @@ function resolveLogTime(slotIdx, entries, decisionContainerId){
           <button id="useNowBtn" style="flex:1; background:var(--g1); border:none; color:#fff; border-radius:8px; padding:9px; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:1px; cursor:pointer;">USE NOW (${nowTime})</button>
         </div>
       </div>`;
-    document.getElementById('keepTimeBtn').onclick = () => finalizeLog(slotIdx, entries, firstTs);
-    document.getElementById('useNowBtn').onclick = () => finalizeLog(slotIdx, entries, Date.now());
+    container.querySelector('#keepTimeBtn').onclick = () => finalizeLog(slotIdx, entries, firstTs);
+    container.querySelector('#useNowBtn').onclick = () => finalizeLog(slotIdx, entries, Date.now());
     return;
   }
 
@@ -1134,8 +1138,8 @@ function resolveLogTime(slotIdx, entries, decisionContainerId){
           <button id="logAnywayBtn" style="flex:1; background:var(--g1); border:none; color:#fff; border-radius:8px; padding:9px; font-family:'Space Mono',monospace; font-size:0.66rem; letter-spacing:1px; cursor:pointer;">LOG ANYWAY</button>
         </div>
       </div>`;
-    document.getElementById('cancelOverlapBtn').onclick = () => { container.innerHTML = ''; };
-    document.getElementById('logAnywayBtn').onclick = () => {
+    container.querySelector('#cancelOverlapBtn').onclick = () => { container.innerHTML = ''; };
+    container.querySelector('#logAnywayBtn').onclick = () => {
       const customTs = customTimestampFor(slotIdx);
       finalizeLog(slotIdx, entries, customTs || Date.now());
     };
