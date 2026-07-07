@@ -276,7 +276,7 @@
       <div class="field">
         <label class="field-label">Your bodyweight</label>
         <div style="display:flex; gap:8px;">
-          <div class="field-input" style="flex:1; background:var(--surface);"><input type="number" id="calcWeight" inputmode="decimal" placeholder="80"></div>
+          <div class="field-input" style="flex:1; background:var(--surface);"><input type="number" id="calcWeight" inputmode="decimal" placeholder="e.g. 80"></div>
           <div class="pulse-select" style="flex:1; margin:0;">
             <div class="pulse-chip active" id="unitKg" onclick="setCalcUnit('kg')">KG</div>
             <div class="pulse-chip" id="unitLbs" onclick="setCalcUnit('lbs')">LBS</div>
@@ -292,9 +292,8 @@
         </div>
       </div>
       <div id="calcResult" style="display:none; text-align:center; padding:10px 0 4px;">
-        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Suggested daily goal</div>
+        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Suggested daily goal · applied above</div>
         <div style="font-family:'Bebas Neue',sans-serif; font-size:2.2rem; color:var(--g1);" id="calcResultVal">—</div>
-        <button id="useCalcBtn" style="background:var(--g1); border:none; color:#fff; border-radius:10px; padding:10px 20px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer; margin-top:8px;">Use this goal</button>
       </div>
     </div>
 
@@ -1390,24 +1389,29 @@ function setCalcAim(el){
 function updateCalcResult(){
   const raw = parseFloat(document.getElementById('calcWeight').value) || 0;
   const resultBox = document.getElementById('calcResult');
-  if (raw <= 0){ resultBox.style.display = 'none'; return; }
+  resultBox.style.display = 'block';
+  if (raw <= 0){
+    document.getElementById('calcResultVal').textContent = '—';
+    document.getElementById('calcResultVal').style.fontSize = '1rem';
+    document.getElementById('calcResultVal').textContent = 'Enter your weight above';
+    return;
+  }
   const kg = calcUnit === 'lbs' ? raw * 0.4536 : raw;
   let suggested = Math.round(kg * calcMult);
   suggested = Math.max(40, Math.min(400, suggested));
+  document.getElementById('calcResultVal').style.fontSize = '2.2rem';
   document.getElementById('calcResultVal').textContent = suggested + 'g';
-  resultBox.style.display = 'block';
-  resultBox.dataset.value = suggested;
+  // Apply live to the main goal field too — tapping an aim updates the goal immediately
+  document.getElementById('goalInput').value = suggested;
 }
 
 document.getElementById('calcToggleBtn').onclick = () => {
   const calc = document.getElementById('goalCalculator');
-  calc.style.display = calc.style.display === 'none' || !calc.style.display ? 'block' : 'none';
+  const opening = calc.style.display === 'none' || !calc.style.display;
+  calc.style.display = opening ? 'block' : 'none';
+  if (opening) updateCalcResult();
 };
 document.getElementById('calcWeight').oninput = updateCalcResult;
-document.getElementById('useCalcBtn').onclick = () => {
-  const v = document.getElementById('calcResult').dataset.value;
-  if (v){ document.getElementById('goalInput').value = v; document.getElementById('goalCalculator').style.display = 'none'; }
-};
 
 function saveGoal(){
   const v = parseInt(document.getElementById('goalInput').value);
