@@ -72,6 +72,7 @@
   .logged-swatch{ width:28px; height:28px; border-radius:7px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
   .logged-name{ flex:1; font-family:'DM Sans',sans-serif; font-size:0.84rem; font-weight:600; color:var(--text); }
   .logged-protein{ font-family:'Space Mono',monospace; font-size:0.78rem; color:var(--g1); font-weight:700; }
+  .logged-macros{ font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted); letter-spacing:0.3px; margin-top:2px; }
   .logged-remove{ background:none; border:none; color:var(--muted); font-size:0.9rem; cursor:pointer; padding:2px 4px; }
 
   .empty-state{ text-align:center; padding:12px 8px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); line-height:1.4; }
@@ -391,6 +392,7 @@
         <span class="unit">g</span>
       </div>
       <div class="portion-calc">= <b id="portionProtein">0g</b> protein</div>
+      <div id="portionMacros" class="logged-macros" style="margin:-4px 0 8px;"></div>
       <span class="log-time-toggle" id="portionTimeToggle" style="font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted2); cursor:pointer; letter-spacing:0.5px; display:inline-block; margin:2px 0 8px;">🕐 LOGGING NOW · TAP TO BACKDATE</span>
       <div id="portionTimePicker" style="display:none; gap:6px; align-items:center; margin-bottom:8px;">
         <input type="time" id="portionTimeInput" style="font-family:'Space Mono',monospace; background:var(--surface2); border:1px solid var(--border2); color:var(--text); border-radius:6px; padding:7px 9px; font-size:0.76rem;">
@@ -777,6 +779,7 @@ function render(){
               <div style="flex:1; min-width:0;">
                 <div class="logged-name">${item.name}</div>
                 <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); letter-spacing:0.5px; margin-top:1px;">Logged at ${new Date(item.loggedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
+                ${item.kcal!=null || item.carbs!=null || item.fat!=null ? `<div class="logged-macros">${[item.kcal!=null?item.kcal+' kcal':'',item.carbs!=null?item.carbs+'g C':'',item.fat!=null?item.fat+'g F':''].filter(Boolean).join(' · ')}</div>` : ''}
                 ${state.foodNotes[item.name.toLowerCase()] ? `<div style="font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--g1); margin-top:2px; font-style:italic;">📝 ${state.foodNotes[item.name.toLowerCase()]}</div>` : ''}
               </div>
               <div class="logged-protein">${item.protein}g</div>
@@ -805,7 +808,7 @@ function removeItem(slotIdx, itemIdx){
 }
 
 // --- Edit a logged item ---
-let editingSlot = null, editingIdx = null;
+let editingSlot = null, editingIdx = null, editingMacros = {};
 
 // Icon picker for the edit sheet — common food emoji, tap to set
 const FOOD_ICONS = ['🍽️','🍗','🥩','🐟','🍣','🦐','🥚','🍳','🥓','🍖','🦃','🥛','🍼','🧀','🥣','🍨','🥤','🫘','🔴','🟢','🟡','⚫','⬜','🟫','🥦','🥬','🌽','🍄','🥔','🥜','🌰','🌱','🍞','🍚','🍝','🌯','🥪','🍕','🥗','🍲','🍛','🍜','🥘','🫐','🍌','🍎','💪','🍽'];
@@ -826,6 +829,7 @@ function pickIcon(ic){
 function openEditItem(slotIdx, itemIdx){
   editingSlot = slotIdx; editingIdx = itemIdx;
   const item = state.slots[slotIdx][itemIdx];
+  editingMacros = { kcal100: item.kcal100, c100: item.c100, f100: item.f100, kcal: item.kcal, carbs: item.carbs, fat: item.fat };
   document.getElementById('editItemName').value = item.name;
   document.getElementById('editItemGrams').value = item.grams;
   document.getElementById('editItemProtein').value = item.protein;
@@ -866,10 +870,12 @@ function closeEditItem(){
 
 document.getElementById('editItemGrams').addEventListener('input', function(){
   const item = state.slots[editingSlot] && state.slots[editingSlot][editingIdx];
-  if (item && item.p100){
-    const grams = parseFloat(this.value) || 0;
+  if (!item) return;
+  const grams = parseFloat(this.value) || 0;
+  if (item.p100){
     document.getElementById('editItemProtein').value = round1((grams/100)*item.p100);
   }
+  editingMacros = scaledMacros(item, grams);
 });
 
 function saveEditItem(){
@@ -907,7 +913,7 @@ function saveEditItem(){
     state.favourites.splice(existingFavIdx, 1);
   }
 
-  state.slots[editingSlot][editingIdx] = { ...item, name, grams, protein, loggedAt, icon: editingIcon };
+  state.slots[editingSlot][editingIdx] = { ...item, ...editingMacros, name, grams, protein, loggedAt, icon: editingIcon };
   saveUserData();
   closeEditItem();
   render();
@@ -992,11 +998,15 @@ async function searchUSDA(query){
   const res = await fetch(url);
   if (!res.ok) throw new Error('USDA lookup failed');
   const data = await res.json();
+  const findNutrient = (nutrients, name) => { const n = (nutrients||[]).find(n=>n.nutrientName===name); return n ? round1(n.value) : null; };
   const results = (data.foods || []).map(f => {
-    const proteinNutrient = (f.foodNutrients || []).find(n => n.nutrientName === 'Protein');
-    const p100 = proteinNutrient ? round1(proteinNutrient.value) : 0;
+    const p100 = findNutrient(f.foodNutrients, 'Protein') || 0;
+    // Secondary macros — shown only "for information", so a missing value just means we don't display that macro rather than guessing.
+    const c100 = findNutrient(f.foodNutrients, 'Carbohydrate, by difference');
+    const f100 = findNutrient(f.foodNutrients, 'Total lipid (fat)');
+    const kcal100 = findNutrient(f.foodNutrients, 'Energy');
     return {
-      id: 'usda-'+f.fdcId, name: f.description, icon: '🍽️', p100,
+      id: 'usda-'+f.fdcId, name: f.description, icon: '🍽️', p100, c100, f100, kcal100,
       typical: 100, typicalLabel: '100g', brand: f.brandOwner || null,
     };
   }).filter(f => f.p100 > 0);
@@ -1009,7 +1019,7 @@ function renderFoodResultsHTML(results, loadingMore){
   el.innerHTML = results.map(f => `
     <div class="food-result" onclick="selectFood('${f.id}', ${f.id.startsWith('usda-') ? 'true' : 'false'})">
       <div class="food-swatch">${f.icon}</div>
-      <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}</h5><span>${f.p100}g protein / 100g</span></div>
+      <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}</h5><span>${f.p100}g protein / 100g${f.kcal100!=null?' · '+f.kcal100+' kcal':''}</span></div>
       <button class="food-add-btn">+</button>
     </div>`).join('')
     || (loadingMore ? '' : `<div class="empty-state">No matches — try a different search or use "Type it in".</div>`);
@@ -1066,6 +1076,19 @@ function updatePortionCalc(){
   const grams = parseFloat(document.getElementById('portionGrams').value) || 0;
   const protein = pendingFood ? Math.round((grams/100)*pendingFood.p100*10)/10 : 0;
   document.getElementById('portionProtein').textContent = protein+'g';
+  document.getElementById('portionMacros').textContent = macroLine(pendingFood, grams);
+}
+
+// Builds the small "for your information" secondary macro line — carbs/fat/kcal.
+// Only shown when the food source actually has that data (USDA); returns '' otherwise
+// so we never fabricate numbers for local/custom foods.
+function macroLine(food, grams){
+  if (!food || (food.kcal100==null && food.c100==null && food.f100==null)) return '';
+  const parts = [];
+  if (food.kcal100!=null) parts.push(Math.round((grams/100)*food.kcal100)+' kcal');
+  if (food.c100!=null) parts.push(round1((grams/100)*food.c100)+'g C');
+  if (food.f100!=null) parts.push(round1((grams/100)*food.f100)+'g F');
+  return parts.join(' · ');
 }
 
 // --- Ported from the live app: backdating + the "keep original time vs use now" decision ---
@@ -1239,7 +1262,18 @@ function confirmLog(){
   if (document.getElementById('portionSaveFav').checked){
     saveFavourite(pendingFood.name, pendingFood.icon, pendingFood.p100, grams);
   }
-  resolveLogTime(pendingSlot, { name: pendingFood.name, icon: pendingFood.icon, grams, protein, id: pendingFood.id, p100: pendingFood.p100 }, 'portionTimeDecision');
+  const macros = pendingFood ? scaledMacros(pendingFood, grams) : {};
+  resolveLogTime(pendingSlot, { name: pendingFood.name, icon: pendingFood.icon, grams, protein, id: pendingFood.id, p100: pendingFood.p100, ...macros }, 'portionTimeDecision');
+}
+
+// Scales a food's per-100g carbs/fat/kcal to the logged portion, keeping the per-100g
+// rates on the item too so grams can be edited later without losing the ratio.
+function scaledMacros(food, grams){
+  const out = {};
+  if (food.kcal100!=null){ out.kcal100 = food.kcal100; out.kcal = Math.round((grams/100)*food.kcal100); }
+  if (food.c100!=null){ out.c100 = food.c100; out.carbs = round1((grams/100)*food.c100); }
+  if (food.f100!=null){ out.f100 = food.f100; out.fat = round1((grams/100)*food.f100); }
+  return out;
 }
 
 // --- Type it in ---
