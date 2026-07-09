@@ -350,7 +350,48 @@
     <div class="portion-step" id="stepSearch">
       <button class="btn-back" id="backToMethodFromSearch">← Back</button>
       <div class="search-bar"><span>🔍</span><input id="foodSearchInput" placeholder="Search foods…"></div>
+      <button id="btnAddFood" style="background:none; border:none; color:var(--g1); font-family:'DM Sans',sans-serif; font-size:0.8rem; font-weight:600; cursor:pointer; padding:8px 0 4px; text-align:left;">+ Can't find it? Add it to your food database</button>
       <div id="foodResults"></div>
+    </div>
+
+    <div class="portion-step" id="stepAddFood">
+      <button class="btn-back" id="backToSearchFromAddFood">← Back</button>
+      <div class="field">
+        <label class="field-label">Food name</label>
+        <div class="field-input"><input id="addFoodName" placeholder="e.g. Mum's shepherd pie"></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Icon</label>
+        <button type="button" id="addFoodIconBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; width:44px; height:44px; font-size:1.3rem; cursor:pointer;">🍽️</button>
+        <div id="addFoodIconPicker" style="display:none; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label">Protein / 100g</label>
+          <div class="field-input"><input type="number" id="addFoodProtein" inputmode="decimal" placeholder="0"><span class="unit">g</span></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Typical portion</label>
+          <div class="field-input"><input type="number" id="addFoodTypical" inputmode="decimal" value="100"><span class="unit">g</span></div>
+        </div>
+      </div>
+      <div style="font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted); margin:2px 0 12px;">Optional — carbs, fat and calories, shown for information only</div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label">Carbs / 100g</label>
+          <div class="field-input"><input type="number" id="addFoodCarbs" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Fat / 100g</label>
+          <div class="field-input"><input type="number" id="addFoodFat" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Calories / 100g</label>
+        <div class="field-input"><input type="number" id="addFoodKcal" inputmode="decimal" placeholder="—"><span class="unit">kcal</span></div>
+      </div>
+      <div id="addFoodError" style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:#e5484d; margin-bottom:8px; display:none;"></div>
+      <button class="btn-confirm" id="saveAddFoodBtn">Save to my food database →</button>
     </div>
 
     <div class="portion-step" id="stepTypeIn">
@@ -840,10 +881,11 @@ function openEditItem(slotIdx, itemIdx){
 
   const proteinInput = document.getElementById('editItemProtein');
   const noteEl = document.getElementById('editItemRatioNote');
-  if (item.p100){
+  const isUsdaVerified = item.id && item.id.startsWith('usda-');
+  if (isUsdaVerified){
     proteinInput.disabled = true;
     proteinInput.style.opacity = '0.5';
-    noteEl.textContent = `Protein locked to this food's verified ratio (${item.p100}g/100g) — change the portion to adjust it.`;
+    noteEl.textContent = `Protein locked to this food's USDA-verified ratio (${item.p100}g/100g) — change the portion to adjust it.`;
   } else {
     proteinInput.disabled = false;
     proteinInput.style.opacity = '1';
@@ -872,7 +914,8 @@ document.getElementById('editItemGrams').addEventListener('input', function(){
   const item = state.slots[editingSlot] && state.slots[editingSlot][editingIdx];
   if (!item) return;
   const grams = parseFloat(this.value) || 0;
-  if (item.p100){
+  const isUsdaVerified = item.id && item.id.startsWith('usda-');
+  if (isUsdaVerified && item.p100){
     document.getElementById('editItemProtein').value = round1((grams/100)*item.p100);
   }
   editingMacros = scaledMacros(item, grams);
@@ -883,7 +926,8 @@ function saveEditItem(){
   const item = state.slots[editingSlot][editingIdx];
   const name = document.getElementById('editItemName').value.trim() || item.name;
   const grams = parseFloat(document.getElementById('editItemGrams').value) || 0;
-  const protein = item.p100 ? round1((grams/100)*item.p100) : round1(parseFloat(document.getElementById('editItemProtein').value) || 0);
+  const isUsdaVerified = item.id && item.id.startsWith('usda-');
+  const protein = (isUsdaVerified && item.p100) ? round1((grams/100)*item.p100) : round1(parseFloat(document.getElementById('editItemProtein').value) || 0);
 
   const timeVal = document.getElementById('editItemTime').value;
   let loggedAt = item.loggedAt;
@@ -902,7 +946,7 @@ function saveEditItem(){
   const wantFav = document.getElementById('editItemSaveFav').checked;
   const existingFavIdx = state.favourites.findIndex(f => f.name.toLowerCase() === name.toLowerCase());
   if (wantFav){
-    const p100 = item.p100 || (grams > 0 ? round1((protein/grams)*100) : 0);
+    const p100 = (isUsdaVerified && item.p100) ? item.p100 : (grams > 0 ? round1((protein/grams)*100) : 0);
     if (existingFavIdx === -1){
       state.favourites.push({ id:'fav-'+Date.now(), name, icon: editingIcon, p100, typical: grams });
     } else {
@@ -944,7 +988,7 @@ document.getElementById('deleteEditItemBtn').onclick = deleteEditItem;
 // --- Add meal sheet ---
 let expandedSlot = null;
 
-const ALL_STEPS = ['stepMethod','stepFavourites','stepSearch','stepTypeIn','stepPortion','stepMealScan'];
+const ALL_STEPS = ['stepMethod','stepFavourites','stepSearch','stepTypeIn','stepAddFood','stepPortion','stepMealScan'];
 
 function showStep(stepId, title){
   ALL_STEPS.forEach(id => document.getElementById(id).classList.toggle('active', id===stepId));
@@ -1016,14 +1060,98 @@ async function searchUSDA(query){
 
 function renderFoodResultsHTML(results, loadingMore){
   const el = document.getElementById('foodResults');
-  el.innerHTML = results.map(f => `
+  el.innerHTML = results.map(f => {
+    const isCustom = state.customFoods.some(cf => cf.id === f.id);
+    return `
     <div class="food-result" onclick="selectFood('${f.id}', ${f.id.startsWith('usda-') ? 'true' : 'false'})">
       <div class="food-swatch">${f.icon}</div>
       <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}</h5><span>${f.p100}g protein / 100g${f.kcal100!=null?' · '+f.kcal100+' kcal':''}</span></div>
+      ${isCustom ? `<button class="logged-remove" title="Delete this food" onclick="event.stopPropagation(); deleteCustomFood('${f.id}')">✕</button>` : ''}
       <button class="food-add-btn">+</button>
-    </div>`).join('')
+    </div>`;
+  }).join('')
     || (loadingMore ? '' : `<div class="empty-state">No matches — try a different search or use "Type it in".</div>`);
 }
+
+// Permanently removes a custom (user-added) food from the user's own data.
+// Built-in local database entries aren't touched here since that list is shared code, not per-user data.
+function deleteCustomFood(id){
+  state.customFoods = state.customFoods.filter(f => f.id !== id);
+  saveUserData();
+  renderFoodResults(document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value : '');
+}
+
+// --- Add a custom food to the user's own searchable database ---
+let addFoodIcon = '🍽️';
+
+function renderAddFoodIconPicker(){
+  const el = document.getElementById('addFoodIconPicker');
+  el.innerHTML = FOOD_ICONS.map(ic => `
+    <button type="button" onclick="pickAddFoodIcon('${ic}')" style="background:${ic===addFoodIcon?'rgba(79,70,229,0.15)':'var(--surface)'}; border:1.5px solid ${ic===addFoodIcon?'var(--g1)':'var(--border2)'}; border-radius:8px; width:36px; height:36px; font-size:1.05rem; cursor:pointer;">${ic}</button>`).join('');
+}
+
+function pickAddFoodIcon(ic){
+  addFoodIcon = ic;
+  document.getElementById('addFoodIconBtn').textContent = ic;
+  document.getElementById('addFoodIconPicker').style.display = 'none';
+}
+
+document.getElementById('addFoodIconBtn').onclick = () => {
+  const picker = document.getElementById('addFoodIconPicker');
+  if (picker.style.display === 'none' || !picker.style.display){
+    renderAddFoodIconPicker();
+    picker.style.display = 'flex';
+  } else {
+    picker.style.display = 'none';
+  }
+};
+
+function openAddFood(){
+  const searchVal = document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value.trim() : '';
+  document.getElementById('addFoodName').value = searchVal;
+  document.getElementById('addFoodProtein').value = '';
+  document.getElementById('addFoodTypical').value = 100;
+  document.getElementById('addFoodCarbs').value = '';
+  document.getElementById('addFoodFat').value = '';
+  document.getElementById('addFoodKcal').value = '';
+  document.getElementById('addFoodError').style.display = 'none';
+  addFoodIcon = '🍽️';
+  document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
+  document.getElementById('addFoodIconPicker').style.display = 'none';
+  showStep('stepAddFood', 'Add a food');
+}
+
+function saveAddFood(){
+  const errEl = document.getElementById('addFoodError');
+  const name = document.getElementById('addFoodName').value.trim();
+  const p100 = round1(parseFloat(document.getElementById('addFoodProtein').value) || 0);
+  const typical = parseFloat(document.getElementById('addFoodTypical').value) || 100;
+
+  if (!name){ errEl.textContent = 'Give it a name first.'; errEl.style.display = 'block'; return; }
+  if (p100 <= 0){ errEl.textContent = 'Protein per 100g needs to be more than 0.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+
+  const carbsVal = document.getElementById('addFoodCarbs').value;
+  const fatVal = document.getElementById('addFoodFat').value;
+  const kcalVal = document.getElementById('addFoodKcal').value;
+
+  const food = {
+    id: 'customfood-'+Date.now(),
+    name, icon: addFoodIcon, p100,
+    typical, typicalLabel: typical+'g',
+    c100: carbsVal!=='' ? round1(parseFloat(carbsVal)) : null,
+    f100: fatVal!=='' ? round1(parseFloat(fatVal)) : null,
+    kcal100: kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null,
+  };
+
+  state.customFoods.push(food);
+  saveUserData();
+  selectFood(food.id, false); // jump straight into logging the food you just added
+}
+
+document.getElementById('btnAddFood').onclick = openAddFood;
+document.getElementById('backToSearchFromAddFood').onclick = () => showStep('stepSearch', 'Search foods');
+document.getElementById('saveAddFoodBtn').onclick = saveAddFood;
 
 // Cache of USDA results actually shown, so selectFood can find them by id
 let lastUsdaResults = [];
@@ -1236,8 +1364,16 @@ function renderFavourites(){
     <div class="food-result" onclick="selectFavourite('${f.id}')">
       <div class="food-swatch">${f.icon}</div>
       <div class="food-info"><h5>${f.name}</h5><span>${f.p100}g protein / 100g</span></div>
+      <button class="logged-remove" title="Remove favourite" onclick="event.stopPropagation(); deleteFavourite('${f.id}')">✕</button>
       <button class="food-add-btn">+</button>
     </div>`).join('');
+}
+
+// Permanently removes a favourite from the user's own data (syncs to Supabase immediately).
+function deleteFavourite(id){
+  state.favourites = state.favourites.filter(f => f.id !== id);
+  saveUserData();
+  renderFavourites();
 }
 
 function selectFavourite(id){
