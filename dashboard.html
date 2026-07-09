@@ -330,6 +330,11 @@
         <div class="method-text"><h4>Type it in</h4><p>Know the numbers already? Enter direct</p></div>
         <div class="method-chevron">›</div>
       </div>
+      <div class="method-btn" id="btnAddFoodTile">
+        <div class="method-icon alt">➕</div>
+        <div class="method-text"><h4>Add a custom food</h4><p>Save it to your database, with a protein ratio, for next time</p></div>
+        <div class="method-chevron">›</div>
+      </div>
       <div class="method-btn primary" id="btnScanPhoto">
         <div class="method-icon">📷</div>
         <div class="method-text"><h4>Scan meal photo</h4><p>Point at your plate, we'll detect items</p></div>
@@ -355,7 +360,7 @@
     </div>
 
     <div class="portion-step" id="stepAddFood">
-      <button class="btn-back" id="backToSearchFromAddFood">← Back</button>
+      <button class="btn-back" id="backToMethodFromAddFood">← Back</button>
       <div class="field">
         <label class="field-label">Food name</label>
         <div class="field-input"><input id="addFoodName" placeholder="e.g. Mum's shepherd pie"></div>
@@ -417,9 +422,6 @@
         <button onclick="clearBackdateTime('typeInTimeToggle','typeInTimePicker')" style="background:var(--surface); border:1px solid var(--border2); color:var(--muted); border-radius:6px; padding:7px 11px; font-family:'Space Mono',monospace; font-size:0.66rem; cursor:pointer;">✕</button>
       </div>
       <div id="typeInTimeDecision"></div>
-      <label style="display:flex; align-items:center; gap:8px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; cursor:pointer;">
-        <input type="checkbox" id="typeInSaveFav" style="width:16px; height:16px; accent-color:var(--g1);"> ⭐ Save as favourite for quick logging later
-      </label>
       <div class="pulse-select" id="pulseSelectTypeIn" style="margin-bottom:14px;"></div>
       <button class="btn-confirm" id="confirmTypeInBtn">Confirm &amp; log →</button>
     </div>
@@ -1150,7 +1152,7 @@ function saveAddFood(){
 }
 
 document.getElementById('btnAddFood').onclick = openAddFood;
-document.getElementById('backToSearchFromAddFood').onclick = () => showStep('stepSearch', 'Search foods');
+document.getElementById('backToMethodFromAddFood').onclick = () => showStep('stepMethod', 'Add meal');
 document.getElementById('saveAddFoodBtn').onclick = saveAddFood;
 
 // Cache of USDA results actually shown, so selectFood can find them by id
@@ -1417,9 +1419,6 @@ function confirmTypeIn(){
   const name = document.getElementById('typeInName').value.trim() || 'Custom meal';
   const grams = parseFloat(document.getElementById('typeInGrams').value) || 0;
   const protein = round1(parseFloat(document.getElementById('typeInProtein').value) || 0);
-  if (document.getElementById('typeInSaveFav').checked && grams > 0){
-    saveFavourite(name, '🍽️', (protein/grams)*100, grams);
-  }
   resolveLogTime(pendingSlot, { name, icon:'🍽️', grams, protein, id:'custom-'+Date.now(), p100: null }, 'typeInTimeDecision');
 }
 
@@ -1651,10 +1650,11 @@ document.getElementById('sheetClose').onclick = closeSheet;
 document.getElementById('sheetBackdrop').onclick = closeSheet;
 
 document.getElementById('btnScanPhoto').onclick = () => startScan(document.getElementById('cameraInput'));
+document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnGallery').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
-document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInTimeDecision').innerHTML=''; document.getElementById('typeInSaveFav').checked=false; buildPulseSelect('pulseSelectTypeIn'); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn'); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
 
 document.getElementById('foodSearchInput').oninput = (e) => renderFoodResults(e.target.value);
 document.getElementById('backToMethodFromFav').onclick = () => showStep('stepMethod','Add meal');
