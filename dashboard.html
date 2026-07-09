@@ -223,6 +223,21 @@
       </div>
     </div>
     <div id="editItemRatioNote" style="font-family:'DM Sans',sans-serif; font-size:0.74rem; color:var(--muted2); margin:-6px 0 14px; line-height:1.4;"></div>
+    <div style="font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted); margin:-6px 0 8px;">Optional — carbs, fat and calories, shown for information only</div>
+    <div class="row2">
+      <div class="field">
+        <label class="field-label">Carbs</label>
+        <div class="field-input"><input type="number" id="editItemCarbs" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Fat</label>
+        <div class="field-input"><input type="number" id="editItemFat" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Calories</label>
+      <div class="field-input"><input type="number" id="editItemKcal" inputmode="decimal" placeholder="—"><span class="unit">kcal</span></div>
+    </div>
     <div class="field">
       <label class="field-label">Time logged</label>
       <div class="field-input"><input type="time" id="editItemTime"></div>
@@ -851,7 +866,7 @@ function removeItem(slotIdx, itemIdx){
 }
 
 // --- Edit a logged item ---
-let editingSlot = null, editingIdx = null, editingMacros = {};
+let editingSlot = null, editingIdx = null;
 
 // Icon picker for the edit sheet — common food emoji, tap to set
 const FOOD_ICONS = ['🍽️','🍗','🥩','🐟','🍣','🦐','🥚','🍳','🥓','🍖','🦃','🥛','🍼','🧀','🥣','🍨','🥤','🫘','🔴','🟢','🟡','⚫','⬜','🟫','🥦','🥬','🌽','🍄','🥔','🥜','🌰','🌱','🍞','🍚','🍝','🌯','🥪','🍕','🥗','🍲','🍛','🍜','🥘','🫐','🍌','🍎','💪','🍽'];
@@ -872,10 +887,12 @@ function pickIcon(ic){
 function openEditItem(slotIdx, itemIdx){
   editingSlot = slotIdx; editingIdx = itemIdx;
   const item = state.slots[slotIdx][itemIdx];
-  editingMacros = { kcal100: item.kcal100, c100: item.c100, f100: item.f100, kcal: item.kcal, carbs: item.carbs, fat: item.fat };
   document.getElementById('editItemName').value = item.name;
   document.getElementById('editItemGrams').value = item.grams;
   document.getElementById('editItemProtein').value = item.protein;
+  document.getElementById('editItemCarbs').value = item.carbs!=null ? item.carbs : '';
+  document.getElementById('editItemFat').value = item.fat!=null ? item.fat : '';
+  document.getElementById('editItemKcal').value = item.kcal!=null ? item.kcal : '';
 
   editingIcon = item.icon || '🍽️';
   document.getElementById('editItemIconBtn').textContent = editingIcon;
@@ -920,7 +937,14 @@ document.getElementById('editItemGrams').addEventListener('input', function(){
   if (isUsdaVerified && item.p100){
     document.getElementById('editItemProtein').value = round1((grams/100)*item.p100);
   }
-  editingMacros = scaledMacros(item, grams);
+  // Only USDA items carry a known per-100g rate, so only those auto-rescale.
+  // Anything you've typed in by hand for other foods is left as-is until you change it yourself.
+  if (isUsdaVerified){
+    const scaled = scaledMacros(item, grams);
+    if (scaled.kcal!=null) document.getElementById('editItemKcal').value = scaled.kcal;
+    if (scaled.carbs!=null) document.getElementById('editItemCarbs').value = scaled.carbs;
+    if (scaled.fat!=null) document.getElementById('editItemFat').value = scaled.fat;
+  }
 });
 
 function saveEditItem(){
@@ -939,6 +963,19 @@ function saveEditItem(){
     d.setHours(h,m,0,0);
     loggedAt = d.toISOString();
   }
+
+  const carbsVal = document.getElementById('editItemCarbs').value;
+  const fatVal = document.getElementById('editItemFat').value;
+  const kcalVal = document.getElementById('editItemKcal').value;
+  const carbs = carbsVal!=='' ? round1(parseFloat(carbsVal)) : null;
+  const fat = fatVal!=='' ? round1(parseFloat(fatVal)) : null;
+  const kcal = kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null;
+  const macroFields = {
+    carbs, fat, kcal,
+    c100: (carbs!=null && grams>0) ? round1((carbs/grams)*100) : null,
+    f100: (fat!=null && grams>0) ? round1((fat/grams)*100) : null,
+    kcal100: (kcal!=null && grams>0) ? Math.round((kcal/grams)*100) : null,
+  };
 
   const noteVal = document.getElementById('editItemNotes').value.trim();
   if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
@@ -959,7 +996,7 @@ function saveEditItem(){
     state.favourites.splice(existingFavIdx, 1);
   }
 
-  state.slots[editingSlot][editingIdx] = { ...item, ...editingMacros, name, grams, protein, loggedAt, icon: editingIcon };
+  state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, name, grams, protein, loggedAt, icon: editingIcon };
   saveUserData();
   closeEditItem();
   render();
