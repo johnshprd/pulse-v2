@@ -1117,6 +1117,7 @@ function closeSheet(){
   document.getElementById('sheetBackdrop').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
   editingFoodId = null;
+  editingFoodKind = null;
   ['portionTimeDecision','typeInTimeDecision','scanTimeDecision'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
@@ -1196,7 +1197,8 @@ function deleteCustomFood(id){
 
 // --- Add a custom food to the user's own searchable database ---
 let addFoodIcon = '🍽️';
-let editingFoodId = null; // set when the add-food sheet is being reused to edit an existing custom food
+let editingFoodId = null;   // set when the add-food sheet is reused to edit an existing entry
+let editingFoodKind = null; // 'customFood' | 'favourite' — which list editingFoodId belongs to
 
 function renderAddFoodIconPicker(){
   const el = document.getElementById('addFoodIconPicker');
@@ -1222,6 +1224,7 @@ document.getElementById('addFoodIconBtn').onclick = () => {
 
 function openAddFood(){
   editingFoodId = null;
+  editingFoodKind = null;
   const searchVal = document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value.trim() : '';
   document.getElementById('addFoodName').value = searchVal;
   document.getElementById('addFoodProtein').value = '';
@@ -1244,6 +1247,7 @@ function openEditFood(id){
   const food = state.customFoods.find(f => f.id === id);
   if (!food) return;
   editingFoodId = id;
+  editingFoodKind = 'customFood';
   document.getElementById('addFoodName').value = food.name;
   document.getElementById('addFoodProtein').value = food.p100;
   document.getElementById('addFoodTypical').value = food.typical;
@@ -1256,6 +1260,28 @@ function openEditFood(id){
   document.getElementById('addFoodIconPicker').style.display = 'none';
   document.getElementById('saveAddFoodBtn').textContent = 'Save changes →';
   showStep('stepAddFood', 'Edit food');
+}
+
+// Same idea, but for an entry in the separate Favourites list — favourites
+// are their own dataset (state.favourites), not the custom-foods database,
+// so they need their own edit path even though the sheet is shared.
+function openEditFavourite(id){
+  const fav = state.favourites.find(f => f.id === id);
+  if (!fav) return;
+  editingFoodId = id;
+  editingFoodKind = 'favourite';
+  document.getElementById('addFoodName').value = fav.name;
+  document.getElementById('addFoodProtein').value = fav.p100;
+  document.getElementById('addFoodTypical').value = fav.typical;
+  document.getElementById('addFoodCarbs').value = '';
+  document.getElementById('addFoodFat').value = '';
+  document.getElementById('addFoodKcal').value = '';
+  document.getElementById('addFoodError').style.display = 'none';
+  addFoodIcon = fav.icon || '🍽️';
+  document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
+  document.getElementById('addFoodIconPicker').style.display = 'none';
+  document.getElementById('saveAddFoodBtn').textContent = 'Save changes →';
+  showStep('stepAddFood', 'Edit favourite');
 }
 
 function saveAddFood(){
@@ -1277,15 +1303,27 @@ function saveAddFood(){
     kcal100: kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null,
   };
 
-  if (editingFoodId){
+  if (editingFoodId && editingFoodKind === 'customFood'){
     const idx = state.customFoods.findIndex(f => f.id === editingFoodId);
     if (idx !== -1){
       state.customFoods[idx] = { ...state.customFoods[idx], name, icon: addFoodIcon, p100, typical, typicalLabel: typical+'g', ...macroFields };
     }
     saveUserData();
-    editingFoodId = null;
+    editingFoodId = null; editingFoodKind = null;
     renderFoodResults(document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value : '');
     showStep('stepMethod', 'Add meal'); // back to search rather than assuming they want to log it right now
+    return;
+  }
+
+  if (editingFoodId && editingFoodKind === 'favourite'){
+    const idx = state.favourites.findIndex(f => f.id === editingFoodId);
+    if (idx !== -1){
+      state.favourites[idx] = { ...state.favourites[idx], name, icon: addFoodIcon, p100, typical };
+    }
+    saveUserData();
+    editingFoodId = null; editingFoodKind = null;
+    showStep('stepFavourites', 'Favourites');
+    renderFavourites();
     return;
   }
 
@@ -1302,7 +1340,12 @@ function saveAddFood(){
 }
 
 document.getElementById('btnAddFood').onclick = openAddFood;
-document.getElementById('backToMethodFromAddFood').onclick = () => { editingFoodId = null; showStep('stepMethod', 'Add meal'); };
+document.getElementById('backToMethodFromAddFood').onclick = () => {
+  const wasEditingFavourite = editingFoodKind === 'favourite';
+  editingFoodId = null; editingFoodKind = null;
+  if (wasEditingFavourite){ showStep('stepFavourites', 'Favourites'); renderFavourites(); }
+  else { showStep('stepMethod', 'Add meal'); }
+};
 document.getElementById('saveAddFoodBtn').onclick = saveAddFood;
 
 // Cache of USDA results actually shown, so selectFood can find them by id
@@ -1554,6 +1597,7 @@ function renderFavourites(){
     <div class="food-result" onclick="selectFavourite('${f.id}')">
       <div class="food-swatch">${f.icon}</div>
       <div class="food-info"><h5>${f.name}</h5><span>${f.p100}g protein / 100g</span></div>
+      <button class="logged-remove" title="Edit this favourite" onclick="event.stopPropagation(); openEditFavourite('${f.id}')" style="margin-right:2px; color:var(--g1); font-size:1rem;">✏️</button>
       <button class="logged-remove" title="Remove favourite" onclick="event.stopPropagation(); deleteFavourite('${f.id}')">✕</button>
       <button class="food-add-btn">+</button>
     </div>`).join('');
