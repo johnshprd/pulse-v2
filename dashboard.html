@@ -71,6 +71,12 @@
   .segment.has-fill.hit .seg-pct{ color:#fff; text-shadow:0 1px 3px rgba(20,83,45,0.5); }
   .segment.has-fill.missed .seg-pct{ color:#fff; text-shadow:0 1px 3px rgba(120,53,15,0.5); }
   .segment.has-fill.active .seg-pct{ color:#fff; }
+  .seg-target{ font-family:'Space Mono',monospace; font-size:0.56rem; letter-spacing:0.5px; color:var(--muted); margin-top:1px; }
+  .segment.hit .seg-target{ color:var(--green); opacity:0.85; }
+  .segment.missed .seg-target{ color:var(--amber); opacity:0.85; }
+  .segment.has-fill .seg-target{ color:#fff; opacity:0.85; text-shadow:0 1px 3px rgba(49,46,129,0.5); }
+  .segment.has-fill.hit .seg-target{ color:#fff; text-shadow:0 1px 3px rgba(20,83,45,0.5); }
+  .segment.has-fill.missed .seg-target{ color:#fff; text-shadow:0 1px 3px rgba(120,53,15,0.5); }
 
   .expanded-card{ background:var(--surface); border:1.5px solid var(--g1); border-radius:16px; padding:16px; margin-bottom:12px; }
   .expanded-head{ display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
@@ -201,6 +207,7 @@
       <div class="daily-total"><span class="val" id="dailyTotal">0</span><span class="of">/ <span id="dailyGoalInline">0</span>g today</span></div>
       <div class="daily-left">LEFT<br><b id="dailyLeft">0g</b></div>
     </div>
+    <div id="pulseTargetHint" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:0.5px; margin:-8px 2px 14px;"></div>
 
     <div class="strip" id="strip"></div>
     <div id="pulseList"></div>
@@ -822,6 +829,16 @@ function render(){
   document.getElementById('dailyGoalInline').textContent = state.goal;
   document.getElementById('dailyLeft').textContent = round1(Math.max(0,state.goal-dailyTotal))+'g';
 
+  // Small reference line: what a roughly-even split looks like per pulse.
+  // Uses the actual slot targets if they're not perfectly even (they can be
+  // off by a gram or two due to remainder distribution), otherwise shows
+  // the simple "goal ÷ 4" version the person actually asked for.
+  const targets = state.slotTargets;
+  const allEqual = targets.every(t => t === targets[0]);
+  document.getElementById('pulseTargetHint').textContent = allEqual
+    ? state.goal+'g ÷ 4 pulses ≈ '+targets[0]+'g each'
+    : state.goal+'g ÷ 4 pulses ≈ '+targets.join('g · ')+'g';
+
   // Coach message — ported directly from the live app's updateCoach()
   updateCoach();
 
@@ -849,6 +866,7 @@ function render(){
       <div class="seg-content">
         <div class="seg-label">P${i+1}${showNow?' · Now':''}</div>
         <div class="seg-pct">${total>0||status==='hit'?total+'g':'—'}${status==='hit'?' ✓':''}</div>
+        <div class="seg-target">of ${target}g</div>
       </div>`;
     seg.onclick = () => { expandedSlot = i; render(); };
     stripEl.appendChild(seg);
