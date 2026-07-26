@@ -576,12 +576,14 @@ function activeSlotIndex(){
   return Math.max(firstEmpty, timeSuggested);
 }
 
-// Maps the real MPS state (empty/active/active-met/closed-met/closed-missed)
-// to the strip's simple hit/missed/neutral colouring.
+// Maps the real MPS state (empty/active/active-met/closed-met/closed-short)
+// to the strip's simple hit/missed/neutral colouring. "closed-short" still
+// reads as amber/missed visually — something was logged, just not enough —
+// but downstream text uses entries.length to word it accurately.
 function slotStatus(i){
   const s = getPulseStates()[i].state;
   if (s==='active-met' || s==='closed-met') return 'hit';
-  if (s==='closed-missed') return 'missed';
+  if (s==='closed-short') return 'missed';
   return 'neutral';
 }
 
@@ -606,18 +608,21 @@ function getMpsState(entries){
   return { status: pct<70?'active':'ending', pct, label: h>0?h+'h '+m+'m remaining':m+'m remaining' };
 }
 
-// Ported directly from the live app's getPulseStates
+// Ported from the live app's getPulseStates, plus a `logged` flag: a pulse
+// with something logged (even if under target, even if backdated) is never
+// described as a flat-out "miss" — that word is reserved for genuinely
+// empty pulses whose real-world time window has passed.
 function getPulseStates(){
   return [0,1,2,3].map(i => {
     const entries = state.slots[i] || [];
     const total = slotTotal(i);
     const target = state.slotTargets[i];
     const met = total > 0 && total >= target;
-    if (!entries.length) return { idx:i, name:SLOT_NAMES[i], state:'empty', total, target, remaining:target };
+    if (!entries.length) return { idx:i, name:SLOT_NAMES[i], state:'empty', total, target, remaining:target, logged:false };
     const mps = getMpsState(entries).status; // idle|active|ending|ended
     const windowOpen = mps !== 'ended';
-    if (met) return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active-met':'closed-met', total, target, remaining:0 };
-    return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active':'closed-missed', total, target, remaining: round1(target-total) };
+    if (met) return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active-met':'closed-met', total, target, remaining:0, logged:true };
+    return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active':'closed-short', total, target, remaining: round1(target-total), logged:true };
   });
 }
 
@@ -643,12 +648,16 @@ function updateCoach(){
       }
     });
 
-    const missed = pulses.filter(p=>p.state==='closed-missed');
+    const missed = pulses.filter(p=>p.state==='closed-short');
     const met = pulses.filter(p=>p.state==='active-met'||p.state==='closed-met');
-    const eveningDone = pulses[3].state==='active-met'||pulses[3].state==='closed-met'||pulses[3].state==='closed-missed';
+    const eveningDone = pulses[3].state==='active-met'||pulses[3].state==='closed-met'||pulses[3].state==='closed-short';
     const nothingLogged = pulses.every(p=>p.state==='empty');
 
-    const missedNote = missed.length ? ' You missed the '+missed.map(p=>p.name).join(' and ')+' window'+(missed.length>1?'s':'')+', but keep hitting your active pulses.' : '';
+    // A pulse in this list always has something logged against it — it just
+    // didn't reach its target before the window closed — so this is worded
+    // as a shortfall, never as "you missed it"/"you didn't log it".
+    const shortfallParts = missed.map(p=>p.name+' ('+p.total+'g of '+p.target+'g)');
+    const missedNote = missed.length ? ' You came up short on '+shortfallParts.join(' and ')+', but keep hitting your active pulses.' : '';
 
     let msg;
 
@@ -671,7 +680,7 @@ function updateCoach(){
     }
     else if (eveningDone){
       if (missed.length){
-        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(pulses[3].state!=='closed-missed'?'Evening pulse hit — nice way to close things out. ':'')+'You missed the '+missed.map(p=>p.name).join(' and ')+' window'+(missed.length>1?'s':'')+' today, but tomorrow\'s a fresh set of 4. Rest well.';
+        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(pulses[3].state!=='closed-short'?'Evening pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of 4. Rest well.';
       } else {
         msg = '🌙 <strong>That\'s a wrap for today!</strong> <strong>'+total+'g</strong> logged across the day. Solid work — rest well and reset tomorrow.';
       }
@@ -889,7 +898,7 @@ function render(){
     } else {
       const row = document.createElement('div');
       row.className = 'collapsed-row' + (status==='hit'?' hit':'') + (status==='missed'?' missed':'');
-      const subtitle = pulseWindowLabel(i) + (status==='hit' ? ' · goal hit' : status==='missed' ? ' · missed' : '');
+      const subtitle = pulseWindowLabel(i) + (status==='hit' ? ' · goal hit' : status==='missed' ? ' · '+total+'g of '+target+'g' : '');
       row.innerHTML = `
         ${pulseRing(i, 18)}
         <div class="collapsed-info"><h5>Pulse ${i+1} · ${SLOT_NAMES[i]}</h5><span>${subtitle}</span></div>
