@@ -48,9 +48,9 @@
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
   .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:0; transition:height 0.5s ease; overflow:visible; }
-  .seg-fill-body{ position:absolute; top:-2px; left:0; right:0; bottom:-2px; background:var(--g1); }
-  .segment.hit .seg-fill-body{ background:var(--green); }
-  .segment.missed .seg-fill-body{ background:var(--amber); }
+  .seg-fill-body{ position:absolute; top:-2px; left:0; right:0; bottom:-2px; background:#7c74ea; }
+  .segment.hit .seg-fill-body{ background:#4ade80; }
+  .segment.missed .seg-fill-body{ background:#fbbf24; }
   .seg-wave-wrap{ position:absolute; top:-2px; left:0; width:100%; height:16px; overflow:hidden; -webkit-mask-image:linear-gradient(to bottom, black 0%, black 35%, transparent 85%); mask-image:linear-gradient(to bottom, black 0%, black 35%, transparent 85%); }
   .seg-wave-wrap svg{ position:absolute; top:0; left:0; width:200%; height:100%; }
   .seg-wave-back{ fill:var(--g1); animation:segWave 3.2s linear infinite; }
