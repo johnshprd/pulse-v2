@@ -1428,6 +1428,8 @@ function buildBackdateToggle(toggleId, pickerId, inputId){
   const picker = document.getElementById(pickerId);
   const input = document.getElementById(inputId);
   toggle.textContent = customLogTime[pendingSlot] ? `🕐 LOGGING FOR ${customLogTime[pendingSlot]} · TAP TO CHANGE` : '🕐 LOGGING NOW · TAP TO BACKDATE';
+  toggle.style.color = '';
+  toggle.style.fontWeight = '';
 
   // Warn (and, on save, hard-block) if the time this would actually log at
   // doesn't fall inside the selected pulse's real-world window.
@@ -1440,7 +1442,25 @@ function buildBackdateToggle(toggleId, pickerId, inputId){
   }
   const effectiveTs = customLogTime[pendingSlot] ? customTimestampFor(pendingSlot) : Date.now();
   const issue = effectiveTs ? slotTimeIssue(pendingSlot, effectiveTs) : null;
-  warnEl.textContent = issue ? '⚠️ '+issue.message : '';
+
+  if (issue){
+    const [start,end] = SLOT_WINDOWS[pendingSlot];
+    warnEl.textContent = '⚠️ '+issue.message+' Set a time in the box below ↓';
+    toggle.textContent = '🕐 TAP HERE TO SET A VALID TIME';
+    toggle.style.color = 'var(--amber)';
+    toggle.style.fontWeight = '700';
+    // Surface the picker straight away, pre-filled with a valid suggestion,
+    // rather than leaving the person to hunt for the tiny toggle themselves.
+    if (!customLogTime[pendingSlot]){
+      const suggestedHour = Math.floor((start + Math.min(end, start+2)) / 2);
+      input.value = String(suggestedHour).padStart(2,'0')+':00';
+    } else {
+      input.value = customLogTime[pendingSlot];
+    }
+    picker.style.display = 'flex';
+  } else {
+    warnEl.textContent = '';
+  }
 
   toggle.onclick = () => {
     if (picker.style.display !== 'none'){ picker.style.display='none'; return; }
