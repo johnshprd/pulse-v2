@@ -1116,6 +1116,7 @@ function openSheet(slotIdx){
 function closeSheet(){
   document.getElementById('sheetBackdrop').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
+  editingFoodId = null;
   ['portionTimeDecision','typeInTimeDecision','scanTimeDecision'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
@@ -1177,6 +1178,7 @@ function renderFoodResultsHTML(results, loadingMore){
     <div class="food-result" onclick="selectFood('${f.id}', ${f.id.startsWith('usda-') ? 'true' : 'false'})">
       <div class="food-swatch">${f.icon}</div>
       <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}</h5><span>${f.p100}g protein / 100g${f.kcal100!=null?' · '+f.kcal100+' kcal':''}</span></div>
+      ${isCustom ? `<button class="logged-remove" title="Edit this food" onclick="event.stopPropagation(); openEditFood('${f.id}')" style="margin-right:2px;">✎</button>` : ''}
       ${isCustom ? `<button class="logged-remove" title="Delete this food" onclick="event.stopPropagation(); deleteCustomFood('${f.id}')">✕</button>` : ''}
       <button class="food-add-btn">+</button>
     </div>`;
@@ -1194,6 +1196,7 @@ function deleteCustomFood(id){
 
 // --- Add a custom food to the user's own searchable database ---
 let addFoodIcon = '🍽️';
+let editingFoodId = null; // set when the add-food sheet is being reused to edit an existing custom food
 
 function renderAddFoodIconPicker(){
   const el = document.getElementById('addFoodIconPicker');
@@ -1218,6 +1221,7 @@ document.getElementById('addFoodIconBtn').onclick = () => {
 };
 
 function openAddFood(){
+  editingFoodId = null;
   const searchVal = document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value.trim() : '';
   document.getElementById('addFoodName').value = searchVal;
   document.getElementById('addFoodProtein').value = '';
@@ -1229,7 +1233,29 @@ function openAddFood(){
   addFoodIcon = '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
+  document.getElementById('saveAddFoodBtn').textContent = 'Save food →';
   showStep('stepAddFood', 'Add a food');
+}
+
+// Reopens the same sheet pre-filled with an existing custom food's details,
+// so you can fix a name, protein ratio, portion size etc without deleting
+// and re-creating it from scratch.
+function openEditFood(id){
+  const food = state.customFoods.find(f => f.id === id);
+  if (!food) return;
+  editingFoodId = id;
+  document.getElementById('addFoodName').value = food.name;
+  document.getElementById('addFoodProtein').value = food.p100;
+  document.getElementById('addFoodTypical').value = food.typical;
+  document.getElementById('addFoodCarbs').value = food.c100 != null ? food.c100 : '';
+  document.getElementById('addFoodFat').value = food.f100 != null ? food.f100 : '';
+  document.getElementById('addFoodKcal').value = food.kcal100 != null ? food.kcal100 : '';
+  document.getElementById('addFoodError').style.display = 'none';
+  addFoodIcon = food.icon || '🍽️';
+  document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
+  document.getElementById('addFoodIconPicker').style.display = 'none';
+  document.getElementById('saveAddFoodBtn').textContent = 'Save changes →';
+  showStep('stepAddFood', 'Edit food');
 }
 
 function saveAddFood(){
@@ -1245,14 +1271,29 @@ function saveAddFood(){
   const carbsVal = document.getElementById('addFoodCarbs').value;
   const fatVal = document.getElementById('addFoodFat').value;
   const kcalVal = document.getElementById('addFoodKcal').value;
+  const macroFields = {
+    c100: carbsVal!=='' ? round1(parseFloat(carbsVal)) : null,
+    f100: fatVal!=='' ? round1(parseFloat(fatVal)) : null,
+    kcal100: kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null,
+  };
+
+  if (editingFoodId){
+    const idx = state.customFoods.findIndex(f => f.id === editingFoodId);
+    if (idx !== -1){
+      state.customFoods[idx] = { ...state.customFoods[idx], name, icon: addFoodIcon, p100, typical, typicalLabel: typical+'g', ...macroFields };
+    }
+    saveUserData();
+    editingFoodId = null;
+    renderFoodResults(document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value : '');
+    showStep('stepMethod', 'Add meal'); // back to search rather than assuming they want to log it right now
+    return;
+  }
 
   const food = {
     id: 'customfood-'+Date.now(),
     name, icon: addFoodIcon, p100,
     typical, typicalLabel: typical+'g',
-    c100: carbsVal!=='' ? round1(parseFloat(carbsVal)) : null,
-    f100: fatVal!=='' ? round1(parseFloat(fatVal)) : null,
-    kcal100: kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null,
+    ...macroFields,
   };
 
   state.customFoods.push(food);
@@ -1261,7 +1302,7 @@ function saveAddFood(){
 }
 
 document.getElementById('btnAddFood').onclick = openAddFood;
-document.getElementById('backToMethodFromAddFood').onclick = () => showStep('stepMethod', 'Add meal');
+document.getElementById('backToMethodFromAddFood').onclick = () => { editingFoodId = null; showStep('stepMethod', 'Add meal'); };
 document.getElementById('saveAddFoodBtn').onclick = saveAddFood;
 
 // Cache of USDA results actually shown, so selectFood can find them by id
