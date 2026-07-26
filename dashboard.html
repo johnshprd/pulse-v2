@@ -47,9 +47,19 @@
   .segment.active{ border-color:var(--g1); background:rgba(79,70,229,0.07); }
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
-  .seg-fill{ position:absolute; bottom:0; left:0; right:0; background:rgba(79,70,229,0.14); z-index:0; transition:height 0.4s; }
-  .segment.hit .seg-fill{ background:rgba(22,163,74,0.14); }
-  .segment.missed .seg-fill{ background:rgba(217,119,6,0.14); }
+  .seg-fill{ position:absolute; bottom:0; left:0; right:0; height:0; z-index:0; transition:height 0.5s ease; overflow:visible; }
+  .seg-fill-body{ position:absolute; top:7px; left:0; right:0; bottom:0; background:rgba(79,70,229,0.14); }
+  .segment.hit .seg-fill-body{ background:rgba(22,163,74,0.14); }
+  .segment.missed .seg-fill-body{ background:rgba(217,119,6,0.14); }
+  .seg-wave-wrap{ position:absolute; top:-1px; left:0; width:100%; height:9px; overflow:hidden; }
+  .seg-wave-wrap svg{ position:absolute; top:0; width:200%; height:100%; }
+  .seg-wave-back{ fill:rgba(79,70,229,0.20); animation:segWave 5s linear infinite; }
+  .seg-wave-front{ fill:rgba(79,70,229,0.30); animation:segWave 3.4s linear infinite reverse; }
+  .segment.hit .seg-wave-back{ fill:rgba(22,163,74,0.24); }
+  .segment.hit .seg-wave-front{ fill:rgba(22,163,74,0.34); }
+  .segment.missed .seg-wave-back{ fill:rgba(217,119,6,0.24); }
+  .segment.missed .seg-wave-front{ fill:rgba(217,119,6,0.34); }
+  @keyframes segWave{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
   .seg-content{ position:relative; z-index:1; }
   .seg-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; margin-bottom:2px; }
   .segment.active .seg-label{ color:var(--g1); font-weight:700; }
@@ -795,7 +805,13 @@ function render(){
     const mpsStatus = getMpsState(state.slots[i]||[]).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     seg.innerHTML = `
-      <div class="seg-fill" style="height:${pct}%;"></div>
+      <div class="seg-fill" style="height:${pct}%;">
+        ${pct>0?`<div class="seg-wave-wrap">
+          <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
+          <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg>
+        </div>`:''}
+        <div class="seg-fill-body"></div>
+      </div>
       <div class="seg-content">
         <div class="seg-label">P${i+1}${showNow?' · Now':''}</div>
         <div class="seg-pct">${total>0||status==='hit'?total+'g':'—'}${status==='hit'?' ✓':''}</div>
