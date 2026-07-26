@@ -512,6 +512,27 @@
 <script>
 const SLOT_NAMES = ['Breakfast','Lunch','Dinner','Evening'];
 const SLOT_ICONS = ['🌅','☀️','🌙','🌛'];
+// Real-world clock windows each pulse is meant to represent — used to stop
+// logging "now" (or a backdated time) into a pulse whose actual window
+// doesn't match the clock, in either direction (too late or too early).
+const SLOT_WINDOWS = [ [0,11], [11,16], [16,20], [20,24] ];
+
+function fmtHour(h){ return String(Math.floor(h)).padStart(2,'0')+':00'; }
+
+// Returns null if `ts` falls inside slotIdx's real-world window, otherwise
+// { type:'late'|'early', message } describing why it can't be logged there.
+function slotTimeIssue(slotIdx, ts){
+  const [start,end] = SLOT_WINDOWS[slotIdx];
+  const d = new Date(ts);
+  const h = d.getHours() + d.getMinutes()/60;
+  if (h >= end){
+    return { type:'late', message:`${SLOT_NAMES[slotIdx]}'s window is ${fmtHour(start)}–${fmtHour(end)} — that's already passed. Pick a time inside that window, or log this under a later pulse instead.` };
+  }
+  if (h < start){
+    return { type:'early', message:`${SLOT_NAMES[slotIdx]}'s window doesn't start until ${fmtHour(start)}. Pick a time inside ${fmtHour(start)}–${fmtHour(end)}, or log this under an earlier pulse instead.` };
+  }
+  return null;
+}
 
 let currentUser = null;
 let state = {
@@ -887,6 +908,8 @@ function removeItem(slotIdx, itemIdx){
 
 // --- Edit a logged item ---
 let editingSlot = null, editingIdx = null;
+let editingP100 = null;          // the protein-per-100g ratio in effect for the item being edited
+let editingProteinManual = false; // true once the user types directly into the protein field this session
 
 // Icon picker for the edit sheet — common food emoji, tap to set
 const FOOD_ICONS = ['🍽️','🍗','🥩','🐟','🍣','🦐','🥚','🍳','🥓','🍖','🦃','🥛','🍼','🧀','🥣','🍨','🥤','🫘','🔴','🟢','🟡','⚫','⬜','🟫','🥦','🥬','🌽','🍄','🥔','🥜','🌰','🌱','🍞','🍚','🍝','🌯','🥪','🍕','🥗','🍲','🍛','🍜','🥘','🫐','🍌','🍎','💪','🍽'];
@@ -921,10 +944,17 @@ function openEditItem(slotIdx, itemIdx){
   const proteinInput = document.getElementById('editItemProtein');
   const noteEl = document.getElementById('editItemRatioNote');
   const isUsdaVerified = item.id && item.id.startsWith('usda-');
+  editingProteinManual = false;
+  editingP100 = item.p100 != null ? item.p100
+    : (item.grams > 0 ? round1((item.protein / item.grams) * 100) : null);
   if (isUsdaVerified){
     proteinInput.disabled = true;
     proteinInput.style.opacity = '0.5';
     noteEl.textContent = `Protein locked to this food's USDA-verified ratio (${item.p100}g/100g) — change the portion to adjust it.`;
+  } else if (editingP100 != null){
+    proteinInput.disabled = false;
+    proteinInput.style.opacity = '1';
+    noteEl.textContent = `Protein will scale with quantity (${editingP100}g/100g, based on this entry) — edit the protein field directly to override.`;
   } else {
     proteinInput.disabled = false;
     proteinInput.style.opacity = '1';
@@ -954,11 +984,12 @@ document.getElementById('editItemGrams').addEventListener('input', function(){
   if (!item) return;
   const grams = parseFloat(this.value) || 0;
   const isUsdaVerified = item.id && item.id.startsWith('usda-');
-  if (isUsdaVerified && item.p100){
-    document.getElementById('editItemProtein').value = round1((grams/100)*item.p100);
+  // Auto-rescale protein whenever we have a known ratio and the user hasn't
+  // manually typed their own protein value for this item this session.
+  if (editingP100 != null && !editingProteinManual){
+    document.getElementById('editItemProtein').value = round1((grams/100)*editingP100);
   }
-  // Only USDA items carry a known per-100g rate, so only those auto-rescale.
-  // Anything you've typed in by hand for other foods is left as-is until you change it yourself.
+  // Macros (carbs/fat/kcal) only carry a known per-100g rate for USDA items.
   if (isUsdaVerified){
     const scaled = scaledMacros(item, grams);
     if (scaled.kcal!=null) document.getElementById('editItemKcal').value = scaled.kcal;
@@ -967,13 +998,21 @@ document.getElementById('editItemGrams').addEventListener('input', function(){
   }
 });
 
+// If the person types directly into the protein field, stop auto-rescaling it
+// on further gram changes — their typed value takes precedence until reopened.
+document.getElementById('editItemProtein').addEventListener('input', function(){
+  editingProteinManual = true;
+});
+
 function saveEditItem(){
   if (editingSlot===null || editingIdx===null) return;
   const item = state.slots[editingSlot][editingIdx];
   const name = document.getElementById('editItemName').value.trim() || item.name;
   const grams = parseFloat(document.getElementById('editItemGrams').value) || 0;
   const isUsdaVerified = item.id && item.id.startsWith('usda-');
-  const protein = (isUsdaVerified && item.p100) ? round1((grams/100)*item.p100) : round1(parseFloat(document.getElementById('editItemProtein').value) || 0);
+  const protein = (editingP100 != null && !editingProteinManual)
+    ? round1((grams/100)*editingP100)
+    : round1(parseFloat(document.getElementById('editItemProtein').value) || 0);
 
   const timeVal = document.getElementById('editItemTime').value;
   let loggedAt = item.loggedAt;
@@ -981,6 +1020,9 @@ function saveEditItem(){
     const [h,m] = timeVal.split(':').map(Number);
     const d = new Date(item.loggedAt); // keep the same original day, just change the time
     d.setHours(h,m,0,0);
+    if (d.getTime() > Date.now()){ alert("Can't set a future time"); return; }
+    const issue = slotTimeIssue(editingSlot, d.getTime());
+    if (issue){ alert('⚠️ '+issue.message); return; }
     loggedAt = d.toISOString();
   }
 
@@ -1016,7 +1058,8 @@ function saveEditItem(){
     state.favourites.splice(existingFavIdx, 1);
   }
 
-  state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, name, grams, protein, loggedAt, icon: editingIcon };
+  const p100ToStore = item.p100 != null ? item.p100 : (editingP100 != null ? editingP100 : (grams>0 ? round1((protein/grams)*100) : null));
+  state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, name, grams, protein, loggedAt, icon: editingIcon, p100: p100ToStore };
   saveUserData();
   closeEditItem();
   render();
@@ -1255,7 +1298,7 @@ function selectFood(id, isUsda){
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = false;
   updatePortionCalc();
-  buildPulseSelect('pulseSelect');
+  buildPulseSelect('pulseSelect', () => buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput'));
   buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput');
 }
 
@@ -1365,6 +1408,8 @@ function resolveLogTime(slotIdx, entries, decisionContainerId){
 }
 
 function finalizeLog(slotIdx, entries, ts){
+  const issue = slotTimeIssue(slotIdx, ts);
+  if (issue){ alert('⚠️ '+issue.message); return; }
   if (!Array.isArray(entries)) entries = [entries];
   delete customLogTime[slotIdx];
   if (!state.slots[slotIdx]) state.slots[slotIdx] = [];
@@ -1383,6 +1428,20 @@ function buildBackdateToggle(toggleId, pickerId, inputId){
   const picker = document.getElementById(pickerId);
   const input = document.getElementById(inputId);
   toggle.textContent = customLogTime[pendingSlot] ? `🕐 LOGGING FOR ${customLogTime[pendingSlot]} · TAP TO CHANGE` : '🕐 LOGGING NOW · TAP TO BACKDATE';
+
+  // Warn (and, on save, hard-block) if the time this would actually log at
+  // doesn't fall inside the selected pulse's real-world window.
+  let warnEl = document.getElementById(toggleId+'Warn');
+  if (!warnEl){
+    warnEl = document.createElement('div');
+    warnEl.id = toggleId+'Warn';
+    warnEl.style.cssText = 'font-family:"DM Sans",sans-serif; font-size:0.72rem; color:var(--amber); margin:-4px 0 8px; line-height:1.35;';
+    toggle.insertAdjacentElement('afterend', warnEl);
+  }
+  const effectiveTs = customLogTime[pendingSlot] ? customTimestampFor(pendingSlot) : Date.now();
+  const issue = effectiveTs ? slotTimeIssue(pendingSlot, effectiveTs) : null;
+  warnEl.textContent = issue ? '⚠️ '+issue.message : '';
+
   toggle.onclick = () => {
     if (picker.style.display !== 'none'){ picker.style.display='none'; return; }
     input.value = customLogTime[pendingSlot] || new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false});
@@ -1395,14 +1454,16 @@ function setBackdateTime(toggleId, pickerId, inputId){
   const [h,m] = input.value.split(':').map(Number);
   const d = new Date(); d.setHours(h,m,0,0);
   if (d.getTime() > Date.now()){ alert("Can't log a future time"); return; }
+  const issue = slotTimeIssue(pendingSlot, d.getTime());
+  if (issue){ alert(issue.message); return; }
   customLogTime[pendingSlot] = input.value;
-  document.getElementById(toggleId).textContent = `🕐 LOGGING FOR ${input.value} · TAP TO CHANGE`;
   document.getElementById(pickerId).style.display = 'none';
+  buildBackdateToggle(toggleId, pickerId, inputId);
 }
 function clearBackdateTime(toggleId, pickerId){
   delete customLogTime[pendingSlot];
-  document.getElementById(toggleId).textContent = '🕐 LOGGING NOW · TAP TO BACKDATE';
   document.getElementById(pickerId).style.display = 'none';
+  buildBackdateToggle(toggleId, pickerId, toggleId.replace('Toggle','Input'));
 }
 
 // --- Favourites ---
@@ -1447,7 +1508,7 @@ function selectFavourite(id){
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = true; // already a favourite
   updatePortionCalc();
-  buildPulseSelect('pulseSelect');
+  buildPulseSelect('pulseSelect', () => buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput'));
   buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput');
 }
 
@@ -1525,7 +1586,7 @@ function startScan(fileInputEl){
       }));
       document.getElementById('sheetTitle').textContent = 'Confirm meal';
       renderScanItems();
-      buildPulseSelect('pulseSelectScan', updateScanTotal);
+      buildPulseSelect('pulseSelectScan', () => { updateScanTotal(); buildBackdateToggle('scanTimeToggle','scanTimePicker','scanTimeInput'); });
       updateScanTotal();
     } catch(err){
       document.getElementById('mockItemsList').innerHTML = `<div class="empty-state" style="color:var(--red);">${err.message || 'Analysis failed. Please try again.'}</div>`;
@@ -1711,7 +1772,7 @@ document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnGallery').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
-document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn'); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
 
 document.getElementById('foodSearchInput').oninput = (e) => renderFoodResults(e.target.value);
 document.getElementById('backToMethodFromFav').onclick = () => showStep('stepMethod','Add meal');
