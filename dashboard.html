@@ -399,7 +399,7 @@
       <div class="field">
         <label class="field-label">Icon</label>
         <button type="button" id="addFoodIconBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; width:44px; height:44px; font-size:1.3rem; cursor:pointer;">🍽️</button>
-        <div id="addFoodIconPicker" style="display:none; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+        <div id="addFoodIconPicker" style="display:none; flex-wrap:wrap; gap:6px; margin-top:8px; max-height:180px; overflow-y:auto; padding:2px;"></div>
       </div>
       <div class="row2">
         <div class="field">
@@ -936,7 +936,28 @@ let editingP100 = null;          // the protein-per-100g ratio in effect for the
 let editingProteinManual = false; // true once the user types directly into the protein field this session
 
 // Icon picker for the edit sheet — common food emoji, tap to set
-const FOOD_ICONS = ['🍽️','🍗','🥩','🐟','🍣','🦐','🥚','🍳','🥓','🍖','🦃','🥛','🍼','🧀','🥣','🍨','🥤','🫘','🔴','🟢','🟡','⚫','⬜','🟫','🥦','🥬','🌽','🍄','🥔','🥜','🌰','🌱','🍞','🍚','🍝','🌯','🥪','🍕','🥗','🍲','🍛','🍜','🥘','🫐','🍌','🍎','💪','🍽'];
+const FOOD_ICONS = [
+  // Protein / meat / seafood
+  '🍗','🥩','🐟','🍣','🦐','🥚','🍳','🥓','🍖','🦃','🦀','🦞','🦑','🐙','🍤',
+  // Dairy
+  '🥛','🧀','🍦','🧈','🍼','🥣',
+  // Grains / carbs
+  '🍞','🥖','🥨','🥯','🍚','🍝','🌽','🥔','🍠',
+  // Vegetables
+  '🥦','🥬','🥒','🥕','🧅','🧄','🍄','🌶️','🫑','🍅','🥑','🫘','🫛','🥗',
+  // Fruit
+  '🍎','🍏','🍌','🍇','🍓','🫐','🍒','🍑','🍍','🥭','🍉','🍈','🥝','🍋','🍊','🍐','🥥',
+  // Nuts / seeds
+  '🥜','🌰',
+  // Prepared meals
+  '🍕','🍔','🌭','🥪','🌮','🌯','🥙','🧆','🥘','🍲','🍛','🍜','🍱','🍙','🍘','🍥','🥟','🍢','🍡','🍽️',
+  // Sweets / treats
+  '🍰','🧁','🍪','🍩','🍫','🍬','🍭','🥧','🍨',
+  // Drinks / supplements
+  '🥤','🧃','☕','🍵','🥂','🍷','🍺','🧋','🫙','🧊',
+  // General / colour markers
+  '💪','🔴','🟢','🟡','⚫','⬜','🟫','🌱'
+];
 let editingIcon = '🍽️';
 
 function renderIconPicker(){
