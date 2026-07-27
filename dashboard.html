@@ -779,10 +779,31 @@ function localDateString(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// Ported from v1 (johnshprd/mpspulse/app.html) — 'tester' status bypasses
+// expiry entirely for closed-testing accounts; 'active' status is checked
+// against current_period_end.
+async function checkSubscription(userId) {
+  const { data, error } = await db.from('subscriptions').select('status, current_period_end').eq('user_id', userId).single();
+  if (error || !data) return false;
+  if (data.status === 'tester') return true;
+  if (data.status !== 'active') return false;
+  if (data.current_period_end) { const expiry = new Date(data.current_period_end); if (expiry < new Date()) return false; }
+  return true;
+}
+
 async function init(){
   const { data:{ session } } = await db.auth.getSession();
   if (!session){ window.location.href = 'auth.html'; return; }
   currentUser = session.user;
+
+  const isOwner = currentUser.email === 'johnshpd@gmail.com';
+  if (!isOwner){
+    const hasAccess = await checkSubscription(currentUser.id);
+    // TODO: confirm final redirect target once the mpspulse.app domain swap
+    // is decided — v1 sends this to index.html#pricing, but pulse-v2 has no
+    // index.html of its own yet.
+    if (!hasAccess){ window.location.href = 'index.html#pricing'; return; }
+  }
 
   const today = localDateString();
   const { data } = await db.from('user_data').select('*').eq('user_id', currentUser.id).single();
