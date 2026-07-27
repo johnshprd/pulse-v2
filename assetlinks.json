@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.mpspulse.twa",
+        "sha256_cert_fingerprints": ["0E:DD:65:9C:05:54:66:9D:D5:0D:DC:11:E2:9F:D0:42:00:69:D5:98:5E:9A:B0:E2:FC:B8:20:CC:EE:4A:15:D0"]
+      }
+    }]
