@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse – MPS Protein Tracker</title>
+<script>
+  // The published Android TWA has its launch URL baked in from the web
+  // manifest at build time (start_url: /app.html) and won't pick up a
+  // rename dynamically, so this file exists purely to redirect whatever
+  // hits app.html straight to the real app at dashboard.html.
+  location.replace('dashboard.html' + location.search + location.hash);
+</script>
+<meta http-equiv="refresh" content="0; url=dashboard.html">
+</head>
+<body>
+  <p>Redirecting to <a href="dashboard.html">Pulse</a>…</p>
+</body>
+</html>
