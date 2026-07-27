@@ -426,6 +426,12 @@
         <label class="field-label">Calories / 100g</label>
         <div class="field-input"><input type="number" id="addFoodKcal" inputmode="decimal" placeholder="—"><span class="unit">kcal</span></div>
       </div>
+      <div class="field">
+        <label class="field-label">Notes <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
+        <div class="field-input" style="align-items:flex-start; padding:10px 12px;">
+          <textarea id="addFoodNotes" rows="2" placeholder="e.g. 100g = roughly 2 large eggs" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
+        </div>
+      </div>
       <div id="addFoodError" style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:#e5484d; margin-bottom:8px; display:none;"></div>
       <button class="btn-confirm" id="saveAddFoodBtn">Save to my food database →</button>
     </div>
@@ -446,6 +452,12 @@
           <div class="field-input"><input type="number" id="typeInProtein" inputmode="decimal" value="0"><span class="unit">g</span></div>
         </div>
       </div>
+      <div class="field">
+        <label class="field-label">Notes <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
+        <div class="field-input" style="align-items:flex-start; padding:10px 12px;">
+          <textarea id="typeInNotes" rows="2" placeholder="e.g. Mum's recipe, roughly 2 scoops" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
+        </div>
+      </div>
       <span class="log-time-toggle" id="typeInTimeToggle" style="font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted2); cursor:pointer; letter-spacing:0.5px; display:inline-block; margin:2px 0 8px;">🕐 LOGGING NOW · TAP TO BACKDATE</span>
       <div id="typeInTimePicker" style="display:none; gap:6px; align-items:center; margin-bottom:8px;">
         <input type="time" id="typeInTimeInput" style="font-family:'Space Mono',monospace; background:var(--surface2); border:1px solid var(--border2); color:var(--text); border-radius:6px; padding:7px 9px; font-size:0.76rem;">
@@ -460,7 +472,12 @@
     <div class="portion-step" id="stepPortion">
       <button class="btn-back" id="backToSearch">← Back to search</button>
       <div class="portion-food-name" id="portionFoodName">—</div>
-      <div id="portionFoodNote" style="font-family:'DM Sans',sans-serif; font-size:0.78rem; color:var(--g1); font-style:italic; margin:-4px 0 8px;"></div>
+      <div class="field" style="margin-top:-4px;">
+        <label class="field-label">Notes <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
+        <div class="field-input" style="align-items:flex-start; padding:10px 12px;">
+          <textarea id="portionFoodNote" rows="2" placeholder="e.g. 100g = roughly 2 large eggs" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
+        </div>
+      </div>
       <div class="portion-field">
         <input type="number" id="portionGrams" inputmode="decimal">
         <span class="unit">g</span>
@@ -488,6 +505,12 @@
       </div>
       <div id="mockItemsList"></div>
       <button class="add-missed-btn" id="addMissedItemBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">+ Add missed item</button>
+      <div class="field">
+        <label class="field-label">Notes for this meal <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
+        <div class="field-input" style="align-items:flex-start; padding:10px 12px;">
+          <textarea id="scanNotes" rows="2" placeholder="e.g. Eaten out, portion was a guess" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
+        </div>
+      </div>
       <div class="pulse-select" id="pulseSelectScan" style="margin:14px 0;"></div>
       <span class="log-time-toggle" id="scanTimeToggle" style="font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted2); cursor:pointer; letter-spacing:0.5px; display:inline-block; margin:2px 0 8px;">🕐 LOGGING NOW · TAP TO BACKDATE</span>
       <div id="scanTimePicker" style="display:none; gap:6px; align-items:center; margin-bottom:8px;">
@@ -903,7 +926,7 @@ function render(){
                 <div class="logged-name">${item.name}</div>
                 <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted); letter-spacing:0.5px; margin-top:1px;">Logged at ${new Date(item.loggedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>
                 ${item.kcal!=null || item.carbs!=null || item.fat!=null ? `<div class="logged-macros">${[item.kcal!=null?item.kcal+' kcal':'',item.carbs!=null?item.carbs+'g C':'',item.fat!=null?item.fat+'g F':''].filter(Boolean).join(' · ')}</div>` : ''}
-                ${state.foodNotes[item.name.toLowerCase()] ? `<div style="font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--g1); margin-top:2px; font-style:italic;">📝 ${state.foodNotes[item.name.toLowerCase()]}</div>` : ''}
+                ${(item.note !== undefined ? item.note : state.foodNotes[item.name.toLowerCase()]) ? `<div style="font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--g1); margin-top:2px; font-style:italic;">📝 ${item.note !== undefined ? item.note : state.foodNotes[item.name.toLowerCase()]}</div>` : ''}
               </div>
               <div class="logged-protein">${item.protein}g</div>
               <span style="color:var(--muted); font-size:0.85rem; margin-left:2px;">✎</span>
@@ -1012,7 +1035,10 @@ function openEditItem(slotIdx, itemIdx){
 
   document.getElementById('editItemNotesFoodName').textContent = item.name;
   document.getElementById('editItemSaveFav').checked = !!state.favourites.find(f => f.name.toLowerCase() === item.name.toLowerCase());
-  document.getElementById('editItemNotes').value = state.foodNotes[item.name.toLowerCase()] || '';
+  // Items logged from a meal photo scan can carry their own one-off note
+  // (item.note) rather than the "remembered for next time" name-based one —
+  // prefer that if it's there.
+  document.getElementById('editItemNotes').value = item.note !== undefined ? item.note : (state.foodNotes[item.name.toLowerCase()] || '');
 
   document.getElementById('editItemBackdrop').classList.add('open');
   document.getElementById('editItemSheet').classList.add('open');
@@ -1085,8 +1111,14 @@ function saveEditItem(){
   };
 
   const noteVal = document.getElementById('editItemNotes').value.trim();
-  if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
-  else delete state.foodNotes[name.toLowerCase()];
+  const itemHasOwnNote = item.note !== undefined;
+  let noteField = {};
+  if (itemHasOwnNote){
+    noteField = { note: noteVal };
+  } else {
+    if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
+    else delete state.foodNotes[name.toLowerCase()];
+  }
 
   // Favourite toggle — tick adds or updates, untick removes
   const wantFav = document.getElementById('editItemSaveFav').checked;
@@ -1104,7 +1136,7 @@ function saveEditItem(){
   }
 
   const p100ToStore = item.p100 != null ? item.p100 : (editingP100 != null ? editingP100 : (grams>0 ? round1((protein/grams)*100) : null));
-  state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, name, grams, protein, loggedAt, icon: editingIcon, p100: p100ToStore };
+  state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, ...noteField, name, grams, protein, loggedAt, icon: editingIcon, p100: p100ToStore };
   saveUserData();
   closeEditItem();
   render();
@@ -1154,6 +1186,7 @@ function closeSheet(){
   document.getElementById('sheet').classList.remove('open');
   editingFoodId = null;
   editingFoodKind = null;
+  editingOriginalName = null;
   ['portionTimeDecision','typeInTimeDecision','scanTimeDecision'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '';
@@ -1235,6 +1268,7 @@ function deleteCustomFood(id){
 let addFoodIcon = '🍽️';
 let editingFoodId = null;   // set when the add-food sheet is reused to edit an existing entry
 let editingFoodKind = null; // 'customFood' | 'favourite' — which list editingFoodId belongs to
+let editingOriginalName = null; // tracks the pre-edit name, so a rename moves its note across correctly
 
 function renderAddFoodIconPicker(){
   const el = document.getElementById('addFoodIconPicker');
@@ -1261,6 +1295,7 @@ document.getElementById('addFoodIconBtn').onclick = () => {
 function openAddFood(){
   editingFoodId = null;
   editingFoodKind = null;
+  editingOriginalName = null;
   const searchVal = document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value.trim() : '';
   document.getElementById('addFoodName').value = searchVal;
   document.getElementById('addFoodProtein').value = '';
@@ -1268,6 +1303,7 @@ function openAddFood(){
   document.getElementById('addFoodCarbs').value = '';
   document.getElementById('addFoodFat').value = '';
   document.getElementById('addFoodKcal').value = '';
+  document.getElementById('addFoodNotes').value = searchVal ? (state.foodNotes[searchVal.toLowerCase()] || '') : '';
   document.getElementById('addFoodError').style.display = 'none';
   addFoodIcon = '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
@@ -1284,12 +1320,14 @@ function openEditFood(id){
   if (!food) return;
   editingFoodId = id;
   editingFoodKind = 'customFood';
+  editingOriginalName = food.name;
   document.getElementById('addFoodName').value = food.name;
   document.getElementById('addFoodProtein').value = food.p100;
   document.getElementById('addFoodTypical').value = food.typical;
   document.getElementById('addFoodCarbs').value = food.c100 != null ? food.c100 : '';
   document.getElementById('addFoodFat').value = food.f100 != null ? food.f100 : '';
   document.getElementById('addFoodKcal').value = food.kcal100 != null ? food.kcal100 : '';
+  document.getElementById('addFoodNotes').value = state.foodNotes[food.name.toLowerCase()] || '';
   document.getElementById('addFoodError').style.display = 'none';
   addFoodIcon = food.icon || '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
@@ -1306,12 +1344,14 @@ function openEditFavourite(id){
   if (!fav) return;
   editingFoodId = id;
   editingFoodKind = 'favourite';
+  editingOriginalName = fav.name;
   document.getElementById('addFoodName').value = fav.name;
   document.getElementById('addFoodProtein').value = fav.p100;
   document.getElementById('addFoodTypical').value = fav.typical;
   document.getElementById('addFoodCarbs').value = '';
   document.getElementById('addFoodFat').value = '';
   document.getElementById('addFoodKcal').value = '';
+  document.getElementById('addFoodNotes').value = state.foodNotes[fav.name.toLowerCase()] || '';
   document.getElementById('addFoodError').style.display = 'none';
   addFoodIcon = fav.icon || '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
@@ -1330,6 +1370,19 @@ function saveAddFood(){
   if (p100 <= 0){ errEl.textContent = 'Protein per 100g needs to be more than 0.'; errEl.style.display = 'block'; return; }
   errEl.style.display = 'none';
 
+  // If this is a rename, move the note across rather than orphaning it
+  // under the old name or leaving the new name with nothing.
+  if (editingOriginalName && editingOriginalName.toLowerCase() !== name.toLowerCase()){
+    const carried = state.foodNotes[editingOriginalName.toLowerCase()];
+    delete state.foodNotes[editingOriginalName.toLowerCase()];
+    if (carried && !document.getElementById('addFoodNotes').value.trim()){
+      document.getElementById('addFoodNotes').value = carried;
+    }
+  }
+  const noteVal = document.getElementById('addFoodNotes').value.trim();
+  if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
+  else delete state.foodNotes[name.toLowerCase()];
+
   const carbsVal = document.getElementById('addFoodCarbs').value;
   const fatVal = document.getElementById('addFoodFat').value;
   const kcalVal = document.getElementById('addFoodKcal').value;
@@ -1345,7 +1398,7 @@ function saveAddFood(){
       state.customFoods[idx] = { ...state.customFoods[idx], name, icon: addFoodIcon, p100, typical, typicalLabel: typical+'g', ...macroFields };
     }
     saveUserData();
-    editingFoodId = null; editingFoodKind = null;
+    editingFoodId = null; editingFoodKind = null; editingOriginalName = null;
     renderFoodResults(document.getElementById('foodSearchInput') ? document.getElementById('foodSearchInput').value : '');
     showStep('stepMethod', 'Add meal'); // back to search rather than assuming they want to log it right now
     return;
@@ -1357,7 +1410,7 @@ function saveAddFood(){
       state.favourites[idx] = { ...state.favourites[idx], name, icon: addFoodIcon, p100, typical };
     }
     saveUserData();
-    editingFoodId = null; editingFoodKind = null;
+    editingFoodId = null; editingFoodKind = null; editingOriginalName = null;
     showStep('stepFavourites', 'Favourites');
     renderFavourites();
     return;
@@ -1378,7 +1431,7 @@ function saveAddFood(){
 document.getElementById('btnAddFood').onclick = openAddFood;
 document.getElementById('backToMethodFromAddFood').onclick = () => {
   const wasEditingFavourite = editingFoodKind === 'favourite';
-  editingFoodId = null; editingFoodKind = null;
+  editingFoodId = null; editingFoodKind = null; editingOriginalName = null;
   if (wasEditingFavourite){ showStep('stepFavourites', 'Favourites'); renderFavourites(); }
   else { showStep('stepMethod', 'Add meal'); }
 };
@@ -1422,7 +1475,7 @@ function selectFood(id, isUsda){
   showStep('stepPortion', 'Confirm portion');
   document.getElementById('portionFoodName').textContent = pendingFood.icon+' '+pendingFood.name;
   const existingNote = state.foodNotes[pendingFood.name.toLowerCase()];
-  document.getElementById('portionFoodNote').textContent = existingNote ? '📝 '+existingNote : '';
+  document.getElementById('portionFoodNote').value = existingNote || '';
   document.getElementById('portionGrams').value = pendingFood.typical;
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = false;
@@ -1734,7 +1787,7 @@ function selectFavourite(id){
   showStep('stepPortion', 'Confirm portion');
   document.getElementById('portionFoodName').textContent = fav.icon+' '+fav.name;
   const existingNote = state.foodNotes[fav.name.toLowerCase()];
-  document.getElementById('portionFoodNote').textContent = existingNote ? '📝 '+existingNote : '';
+  document.getElementById('portionFoodNote').value = existingNote || '';
   document.getElementById('portionGrams').value = fav.typical;
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = true; // already a favourite
@@ -1748,6 +1801,11 @@ function confirmLog(){
   const protein = pendingFood ? Math.round((grams/100)*pendingFood.p100*10)/10 : 0;
   if (document.getElementById('portionSaveFav').checked){
     saveFavourite(pendingFood.name, pendingFood.icon, pendingFood.p100, grams);
+  }
+  const noteVal = document.getElementById('portionFoodNote').value.trim();
+  if (pendingFood){
+    if (noteVal) state.foodNotes[pendingFood.name.toLowerCase()] = noteVal;
+    else delete state.foodNotes[pendingFood.name.toLowerCase()];
   }
   const macros = pendingFood ? scaledMacros(pendingFood, grams) : {};
   resolveLogTime(pendingSlot, { name: pendingFood.name, icon: pendingFood.icon, grams, protein, id: pendingFood.id, p100: pendingFood.p100, ...macros }, 'portionTimeDecision');
@@ -1768,6 +1826,9 @@ function confirmTypeIn(){
   const name = document.getElementById('typeInName').value.trim() || 'Custom meal';
   const grams = parseFloat(document.getElementById('typeInGrams').value) || 0;
   const protein = round1(parseFloat(document.getElementById('typeInProtein').value) || 0);
+  const noteVal = document.getElementById('typeInNotes').value.trim();
+  if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
+  else delete state.foodNotes[name.toLowerCase()];
   resolveLogTime(pendingSlot, { name, icon:'🍽️', grams, protein, id:'custom-'+Date.now(), p100: null }, 'typeInTimeDecision');
 }
 
@@ -1791,6 +1852,7 @@ function startScan(fileInputEl){
     document.getElementById('scanPhotoPreview').src = url;
     showStep('stepMealScan', 'Analysing meal…');
     document.getElementById('scanTimeDecision').innerHTML = '';
+    document.getElementById('scanNotes').value = '';
     buildBackdateToggle('scanTimeToggle','scanTimePicker','scanTimeInput');
     document.getElementById('mockItemsList').innerHTML = `<div class="empty-state">🔍 Analysing your photo…</div>`;
     document.getElementById('scanTotalProtein').textContent = '—';
@@ -1865,6 +1927,7 @@ function updateScanTotal(){
 }
 
 function confirmScan(){
+  const mealNote = document.getElementById('scanNotes').value.trim();
   const entries = scanItems.map(item => ({
     name: item.name.trim() || 'Custom item',
     icon: item.icon,
@@ -1872,6 +1935,7 @@ function confirmScan(){
     protein: round1(item.protein),
     id: 'scan-'+Date.now()+'-'+Math.random(),
     p100: null,
+    note: mealNote, // one note applied to every item from this scan (private to this log, not the shared by-name notes)
   }));
   if (!entries.length) return;
   resolveLogTime(pendingSlot, entries, 'scanTimeDecision');
@@ -2003,7 +2067,7 @@ document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnGallery').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
-document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
 
 document.getElementById('foodSearchInput').oninput = (e) => renderFoodResults(e.target.value);
 document.getElementById('backToMethodFromFav').onclick = () => showStep('stepMethod','Add meal');
