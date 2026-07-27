@@ -119,6 +119,11 @@
   .search-bar{ display:flex; align-items:center; gap:8px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:12px; padding:11px 13px; margin-bottom:12px; }
   .search-bar input{ border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.88rem; color:var(--text); width:100%; }
   .food-result{ display:flex; align-items:center; gap:12px; padding:10px 4px; border-bottom:1px solid var(--border); cursor:pointer; }
+  .drag-handle{ flex-shrink:0; width:22px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--muted2); font-size:1.1rem; cursor:grab; touch-action:none; user-select:none; }
+  .drag-handle:active{ cursor:grabbing; }
+  .food-result.dragging{ position:relative; z-index:5; background:var(--surface); box-shadow:0 6px 16px rgba(22,21,40,0.18); border-radius:10px; }
+  .food-result.drag-shift-down{ transform:translateY(var(--row-h,64px)); transition:transform 0.18s ease; }
+  .food-result.drag-shift-up{ transform:translateY(calc(var(--row-h,64px) * -1)); transition:transform 0.18s ease; }
   .food-swatch{ width:34px; height:34px; border-radius:8px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0; }
   .food-info{ flex:1; min-width:0; }
   .food-info h5{ font-family:'DM Sans',sans-serif; font-size:0.84rem; font-weight:700; margin:0 0 1px; color:var(--text); }
@@ -1603,14 +1608,95 @@ function renderFavourites(){
     el.innerHTML = `<div class="empty-state">No favourites yet — tick "Save as favourite" next time you log a food, and it'll show up here for one-tap logging.</div>`;
     return;
   }
-  el.innerHTML = state.favourites.map(f => `
-    <div class="food-result" onclick="selectFavourite('${f.id}')">
+  el.innerHTML = state.favourites.map((f,idx) => `
+    <div class="food-result" data-fav-id="${f.id}" data-idx="${idx}" onclick="selectFavourite('${f.id}')">
+      <div class="drag-handle" title="Drag to reorder" onclick="event.stopPropagation()">⠿</div>
       <div class="food-swatch">${f.icon}</div>
       <div class="food-info"><h5>${f.name}</h5><span>${f.p100}g protein / 100g</span></div>
       <button class="logged-remove" title="Edit this favourite" onclick="event.stopPropagation(); openEditFavourite('${f.id}')" style="margin-right:2px; color:var(--g1); font-size:1rem;">✏️</button>
       <button class="logged-remove" title="Remove favourite" onclick="event.stopPropagation(); deleteFavourite('${f.id}')">✕</button>
       <button class="food-add-btn">+</button>
     </div>`).join('');
+  initFavouriteDragReorder();
+}
+
+// Touch-friendly drag-to-reorder for the Favourites list. Native HTML5
+// draggable doesn't work reliably on mobile touch, so this tracks pointer
+// position directly: the dragged row follows the finger via a transform,
+// sibling rows slide out of the way to open a gap, and the actual array
+// order is only committed once the drag is released.
+function initFavouriteDragReorder(){
+  const list = document.getElementById('favouritesList');
+  const rows = () => Array.from(list.querySelectorAll('.food-result'));
+
+  rows().forEach(row => {
+    const handle = row.querySelector('.drag-handle');
+    if (!handle) return;
+
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const allRows = rows();
+      const startIdx = allRows.indexOf(row);
+      const rowRect = row.getBoundingClientRect();
+      const rowH = rowRect.height;
+      const startPointerY = e.clientY;
+      let currentIdx = startIdx;
+
+      row.classList.add('dragging');
+      row.style.transition = 'none';
+      row.style.willChange = 'transform';
+      list.style.setProperty('--row-h', rowH+'px');
+      try { handle.setPointerCapture(e.pointerId); } catch(err){}
+
+      function onMove(ev){
+        const deltaY = ev.clientY - startPointerY;
+        row.style.transform = `translateY(${deltaY}px)`;
+
+        // Which slot is the dragged row currently hovering over?
+        const targetIdx = Math.max(0, Math.min(allRows.length-1,
+          startIdx + Math.round(deltaY / rowH)));
+
+        if (targetIdx !== currentIdx){
+          // Shift every row between the old and new position out of the way.
+          allRows.forEach((r, i) => {
+            if (r === row) return;
+            if (targetIdx > currentIdx && i > currentIdx && i <= targetIdx){
+              r.classList.add('drag-shift-up');
+              r.classList.remove('drag-shift-down');
+            } else if (targetIdx < currentIdx && i >= targetIdx && i < currentIdx){
+              r.classList.add('drag-shift-down');
+              r.classList.remove('drag-shift-up');
+            } else {
+              r.classList.remove('drag-shift-up','drag-shift-down');
+            }
+          });
+          currentIdx = targetIdx;
+        }
+      }
+
+      function onUp(ev){
+        handle.removeEventListener('pointermove', onMove);
+        handle.removeEventListener('pointerup', onUp);
+        handle.removeEventListener('pointercancel', onUp);
+        row.classList.remove('dragging');
+        row.style.transition = '';
+        row.style.transform = '';
+        row.style.willChange = '';
+        allRows.forEach(r => r.classList.remove('drag-shift-up','drag-shift-down'));
+
+        if (currentIdx !== startIdx){
+          const moved = state.favourites.splice(startIdx, 1)[0];
+          state.favourites.splice(currentIdx, 0, moved);
+          saveUserData();
+        }
+        renderFavourites(); // clean re-render commits the final order
+      }
+
+      handle.addEventListener('pointermove', onMove);
+      handle.addEventListener('pointerup', onUp);
+      handle.addEventListener('pointercancel', onUp);
+    });
+  });
 }
 
 // Permanently removes a favourite from the user's own data (syncs to Supabase immediately).
