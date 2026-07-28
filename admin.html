@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Admin</title>
+<meta name="theme-color" content="#4f46e5">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e1a;
+  --s1: #1a1830;
+  --s2: #242240;
+  --b1: #2e2b4e;
+  --b2: #3a3660;
+  --accent: #4f46e5;
+  --accent2: #818cf8;
+  --amber: #f59e0b;
+  --red: #f87171;
+  --green: #4ade80;
+  --text: #e8e7f8;
+  --m1: #4a4870;
+  --m2: #9490b8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding-bottom:60px;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(79,70,229,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(79,70,229,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+.hdr{padding:20px 20px 0;position:relative;z-index:1;}
+.hdr-top{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--b2);margin-bottom:20px;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:2.2rem;letter-spacing:6px;color:var(--accent2);line-height:1;}
+.logo-sub{font-family:'Space Mono',monospace;font-size:0.48rem;letter-spacing:4px;color:var(--m2);text-transform:uppercase;}
+.signout{font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:var(--m2);background:none;border:1px solid var(--b1);border-radius:6px;padding:7px 12px;cursor:pointer;}
+
+.pad{padding:0 20px;position:relative;z-index:1;}
+.sec{margin-bottom:26px;}
+.sec-hdr{font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:3px;color:var(--m2);text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.sec-hdr::after{content:'';flex:1;height:1px;background:var(--b1);}
+
+.stat-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.stat{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 14px;}
+.stat-label{font-family:'Space Mono',monospace;font-size:0.42rem;letter-spacing:2px;color:var(--m2);text-transform:uppercase;margin-bottom:4px;}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;line-height:1;color:var(--accent2);}
+
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;}
+
+/* Play Store tracker */
+.tracker-row{display:flex;gap:10px;align-items:center;margin-bottom:14px;}
+.tracker-row label{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:1px;color:var(--m2);text-transform:uppercase;width:110px;flex-shrink:0;}
+.tracker-row input{background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 10px;flex:1;}
+.progress-wrap{margin-top:14px;}
+.progress-label{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:var(--m2);margin-bottom:5px;text-transform:uppercase;}
+.progress-bar{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);transition:width 0.3s ease;}
+.progress-fill.ok{background:var(--green);}
+.tracker-verdict{margin-top:14px;padding:10px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.78rem;line-height:1.4;}
+.tracker-verdict.wait{background:rgba(245,158,11,0.1);border:1px solid var(--amber);color:var(--amber);}
+.tracker-verdict.ready{background:rgba(74,222,128,0.1);border:1px solid var(--green);color:var(--green);}
+
+/* Customer table */
+.cust-table{width:100%;border-collapse:collapse;font-size:0.72rem;}
+.cust-table th{text-align:left;font-family:'Space Mono',monospace;font-size:0.45rem;letter-spacing:1px;color:var(--m2);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--b1);}
+.cust-table td{padding:8px;border-bottom:1px solid var(--b2);vertical-align:middle;word-break:break-word;}
+.status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:0.5px;text-transform:uppercase;}
+.status-pill.tester{background:rgba(129,140,248,0.15);color:var(--accent2);}
+.status-pill.active{background:rgba(74,222,128,0.15);color:var(--green);}
+.status-pill.cancelled,.status-pill.expired{background:rgba(248,113,113,0.15);color:var(--red);}
+.row-actions{display:flex;gap:4px;margin-top:4px;}
+.row-actions select{background:var(--s2);border:1px solid var(--b1);border-radius:5px;color:var(--text);font-size:0.65rem;padding:3px 5px;}
+.row-actions button{background:var(--accent);border:none;border-radius:5px;color:#fff;font-size:0.62rem;padding:3px 8px;cursor:pointer;}
+
+/* Payment log */
+.pay-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.pay-form input,.pay-form textarea{background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.8rem;padding:8px 10px;width:100%;}
+.pay-form .full{grid-column:1/-1;}
+.pay-form button{grid-column:1/-1;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;padding:10px;cursor:pointer;}
+.pay-row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--b2);font-size:0.78rem;}
+.pay-row:last-child{border-bottom:none;}
+.pay-amount{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--green);}
+.pay-notes{color:var(--m2);font-size:0.68rem;margin-top:2px;}
+
+.empty{color:var(--m2);font-size:0.75rem;font-style:italic;padding:10px 0;}
+.err{color:var(--red);font-size:0.75rem;margin-top:8px;}
+
+/* Auth gate */
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10;padding:20px;}
+.gate-card{width:100%;max-width:340px;}
+.gate-logo{font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:6px;color:var(--accent2);text-align:center;margin-bottom:4px;}
+.gate-sub{font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:3px;color:var(--m2);text-align:center;text-transform:uppercase;margin-bottom:28px;}
+.gate-card input{width:100%;background:var(--s1);border:1px solid var(--b1);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;padding:12px 14px;margin-bottom:10px;}
+.gate-card button{width:100%;background:var(--accent);border:none;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.9rem;padding:12px;cursor:pointer;margin-top:4px;}
+.gate-note{font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--m2);text-align:center;margin-top:18px;line-height:1.6;}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-logo">ADMIN</div>
+    <div class="gate-sub">Pulse HQ · Owner Only</div>
+    <input type="email" id="gateEmail" placeholder="your@email.com" autocomplete="username">
+    <input type="password" id="gatePass" placeholder="Password" autocomplete="current-password">
+    <button id="gateBtn">Sign in →</button>
+    <div class="err" id="gateErr" style="display:none;"></div>
+    <div class="gate-note">Access is checked against your Supabase account —<br>not a page-level password. Sign in with the<br>same account you use in the app itself.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <div class="hdr">
+    <div class="hdr-top">
+      <div>
+        <div class="logo">ADMIN</div>
+        <div class="logo-sub">Pulse HQ</div>
+      </div>
+      <button class="signout" id="signOutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="pad">
+
+    <div class="stat-strip">
+      <div class="stat"><div class="stat-label">Signups</div><div class="stat-val" id="statSignups">—</div></div>
+      <div class="stat"><div class="stat-label">Testers</div><div class="stat-val" id="statTesters">—</div></div>
+      <div class="stat"><div class="stat-label">Active</div><div class="stat-val" id="statActive">—</div></div>
+    </div>
+
+    <!-- PLAY STORE TESTING TRACKER -->
+    <div class="sec">
+      <div class="sec-hdr">Play Store Testing Progress</div>
+      <div class="card">
+        <div class="tracker-row">
+          <label>Test started</label>
+          <input type="date" id="trackStart">
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="dayLabel">Day 0 of 14</span><span id="dayPct">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="dayFill" style="width:0%"></div></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-label"><span id="testerLabel">0 of 12 testers</span><span id="testerPct">0%</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="testerFill" style="width:0%"></div></div>
+        </div>
+        <div class="tracker-verdict wait" id="trackerVerdict">Set your test start date above to track progress.</div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="sec">
+      <div class="sec-hdr">Customers &amp; Subscriptions</div>
+      <div class="card">
+        <table class="cust-table" id="custTable">
+          <thead><tr><th>Email</th><th>Status</th><th>Renews / Expires</th></tr></thead>
+          <tbody id="custBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PAYMENT LOG -->
+    <div class="sec">
+      <div class="sec-hdr">Manual Payment Log</div>
+      <div class="card">
+        <div class="pay-form">
+          <input type="email" id="payEmail" placeholder="Customer email">
+          <input type="number" step="0.01" id="payAmount" placeholder="Amount">
+          <input type="date" id="payDate">
+          <input type="text" id="payCurrency" placeholder="Currency (default GBP)">
+          <textarea class="full" id="payNotes" placeholder="Notes (optional) — e.g. how they paid, what plan" rows="2"></textarea>
+          <button id="payAddBtn">Log payment</button>
+        </div>
+        <div id="payErr" class="err" style="display:none;"></div>
+        <div id="payList"><div class="empty">Loading…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script>
+const OWNER_EMAIL = 'johnshpd@gmail.com';
+let currentUser = null;
+
+async function init(){
+  const { data:{ session } } = await db.auth.getSession();
+  if (session && session.user.email === OWNER_EMAIL){
+    currentUser = session.user;
+    unlock();
+  }
+}
+
+function unlock(){
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadStats();
+  loadCustomers();
+  loadPayments();
+  initTracker();
+}
+
+document.getElementById('gateBtn').onclick = async () => {
+  const email = document.getElementById('gateEmail').value.trim();
+  const password = document.getElementById('gatePass').value;
+  const errEl = document.getElementById('gateErr');
+  errEl.style.display = 'none';
+
+  if (email.toLowerCase() !== OWNER_EMAIL){
+    errEl.textContent = 'This page is owner-only.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  if (error){
+    errEl.textContent = error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  currentUser = data.user;
+  unlock();
+};
+
+document.getElementById('signOutBtn').onclick = async () => {
+  await db.auth.signOut();
+  location.reload();
+};
+
+// --- Overview stats ---
+async function loadStats(){
+  const { data, error } = await db.rpc('admin_signup_stats');
+  if (error || !data || !data[0]){
+    console.error('admin_signup_stats failed — did you run the setup SQL?', error);
+    return;
+  }
+  const s = data[0];
+  document.getElementById('statSignups').textContent = s.total_signups;
+  document.getElementById('statTesters').textContent = s.tester_count;
+  document.getElementById('statActive').textContent = s.active_count;
+  // also drives the tracker's tester count
+  window.__testerCount = s.tester_count;
+  renderTracker();
+}
+
+// --- Play Store testing tracker ---
+function initTracker(){
+  const saved = localStorage.getItem('admin_track_start');
+  if (saved) document.getElementById('trackStart').value = saved;
+  document.getElementById('trackStart').addEventListener('change', (e) => {
+    localStorage.setItem('admin_track_start', e.target.value);
+    renderTracker();
+  });
+}
+
+function renderTracker(){
+  const startVal = document.getElementById('trackStart').value;
+  const testers = window.__testerCount || 0;
+  const testerPct = Math.min(100, Math.round((testers/12)*100));
+  document.getElementById('testerLabel').textContent = testers + ' of 12 testers';
+  document.getElementById('testerPct').textContent = testerPct + '%';
+  const testerFill = document.getElementById('testerFill');
+  testerFill.style.width = testerPct + '%';
+  testerFill.classList.toggle('ok', testers >= 12);
+
+  if (!startVal){
+    document.getElementById('dayLabel').textContent = 'Day 0 of 14';
+    document.getElementById('dayPct').textContent = '0%';
+    document.getElementById('dayFill').style.width = '0%';
+    document.getElementById('trackerVerdict').textContent = 'Set your test start date above to track progress.';
+    document.getElementById('trackerVerdict').className = 'tracker-verdict wait';
+    return;
+  }
+
+  const start = new Date(startVal);
+  const daysElapsed = Math.max(0, Math.floor((Date.now() - start.getTime()) / 86400000));
+  const dayPct = Math.min(100, Math.round((daysElapsed/14)*100));
+  document.getElementById('dayLabel').textContent = 'Day ' + Math.min(daysElapsed,14) + ' of 14';
+  document.getElementById('dayPct').textContent = dayPct + '%';
+  const dayFill = document.getElementById('dayFill');
+  dayFill.style.width = dayPct + '%';
+  dayFill.classList.toggle('ok', daysElapsed >= 14);
+
+  const verdictEl = document.getElementById('trackerVerdict');
+  if (daysElapsed >= 14 && testers >= 12){
+    verdictEl.textContent = '✓ Both thresholds met. Worth double-checking in Play Console that testers have stayed opted-in throughout — Google checks the full 14-day window, not just today\'s count — then you can reapply for production access.';
+    verdictEl.className = 'tracker-verdict ready';
+  } else {
+    const missing = [];
+    if (testers < 12) missing.push((12-testers)+' more tester'+(12-testers===1?'':'s'));
+    if (daysElapsed < 14) missing.push((14-daysElapsed)+' more day'+(14-daysElapsed===1?'':'s'));
+    verdictEl.textContent = 'Not yet — still need ' + missing.join(' and ') + '.';
+    verdictEl.className = 'tracker-verdict wait';
+  }
+}
+
+// --- Customers ---
+async function loadCustomers(){
+  const { data, error } = await db.rpc('admin_list_subscriptions');
+  const body = document.getElementById('custBody');
+  if (error){
+    body.innerHTML = `<tr><td colspan="3" class="empty">Couldn't load — did you run the setup SQL? (${error.message})</td></tr>`;
+    return;
+  }
+  if (!data || !data.length){
+    body.innerHTML = `<tr><td colspan="3" class="empty">No subscribers yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = data.map(row => `
+    <tr>
+      <td>${row.email}</td>
+      <td>
+        <span class="status-pill ${row.status}">${row.status}</span>
+        <div class="row-actions">
+          <select id="sel-${row.user_id}">
+            <option value="tester" ${row.status==='tester'?'selected':''}>tester</option>
+            <option value="active" ${row.status==='active'?'selected':''}>active</option>
+            <option value="cancelled" ${row.status==='cancelled'?'selected':''}>cancelled</option>
+            <option value="expired" ${row.status==='expired'?'selected':''}>expired</option>
+          </select>
+          <button onclick="setStatus('${row.email}','${row.user_id}')">Set</button>
+        </div>
+      </td>
+      <td>${row.current_period_end ? new Date(row.current_period_end).toLocaleDateString('en-GB') : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+async function setStatus(email, userId){
+  const newStatus = document.getElementById('sel-'+userId).value;
+  const { error } = await db.rpc('admin_set_subscription_status', { target_email: email, new_status: newStatus });
+  if (error){ alert('Failed: '+error.message); return; }
+  loadCustomers();
+  loadStats();
+}
+
+// --- Payment log ---
+document.getElementById('payAddBtn').onclick = async () => {
+  const email = document.getElementById('payEmail').value.trim();
+  const amount = parseFloat(document.getElementById('payAmount').value);
+  const paidOn = document.getElementById('payDate').value || new Date().toISOString().slice(0,10);
+  const currency = document.getElementById('payCurrency').value.trim() || 'GBP';
+  const notes = document.getElementById('payNotes').value.trim();
+  const errEl = document.getElementById('payErr');
+  errEl.style.display = 'none';
+
+  if (!email || isNaN(amount)){
+    errEl.textContent = 'Email and amount are required.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const { error } = await db.from('payment_log').insert({ email, amount, currency, paid_on: paidOn, notes: notes || null });
+  if (error){
+    errEl.textContent = 'Failed: '+error.message;
+    errEl.style.display = 'block';
+    return;
+  }
+  document.getElementById('payEmail').value = '';
+  document.getElementById('payAmount').value = '';
+  document.getElementById('payNotes').value = '';
+  loadPayments();
+};
+
+async function loadPayments(){
+  const { data, error } = await db.from('payment_log').select('*').order('paid_on', { ascending: false });
+  const el = document.getElementById('payList');
+  if (error){
+    el.innerHTML = `<div class="empty">Couldn't load — did you run the setup SQL? (${error.message})</div>`;
+    return;
+  }
+  if (!data || !data.length){
+    el.innerHTML = `<div class="empty">No payments logged yet.</div>`;
+    return;
+  }
+  el.innerHTML = data.map(p => `
+    <div class="pay-row">
+      <div>
+        <div>${p.email}</div>
+        ${p.notes ? `<div class="pay-notes">${p.notes}</div>` : ''}
+      </div>
+      <div style="text-align:right;">
+        <div class="pay-amount">${p.currency} ${Number(p.amount).toFixed(2)}</div>
+        <div class="pay-notes">${new Date(p.paid_on).toLocaleDateString('en-GB')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+init();
+</script>
+</body>
+</html>
