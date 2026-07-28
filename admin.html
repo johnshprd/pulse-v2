@@ -101,6 +101,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="gate-card">
     <div class="gate-logo">ADMIN</div>
     <div class="gate-sub">Pulse HQ · Owner Only</div>
+    <div id="configErr" style="display:none; background:rgba(248,113,113,0.12); border:1px solid var(--red); border-radius:8px; padding:12px; margin-bottom:14px; font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--red); line-height:1.5;"></div>
     <input type="email" id="gateEmail" placeholder="your@email.com" autocomplete="username">
     <input type="password" id="gatePass" placeholder="Password" autocomplete="current-password">
     <button id="gateBtn">Sign in →</button>
@@ -184,16 +185,30 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 </div>
 
-<script src="js/config.js"></script>
+<script src="js/config.js" onerror="document.getElementById('configErr').style.display='block'; document.getElementById('configErr').textContent='js/config.js failed to load (404 or network error) — check the file exists at that path on this page.';"></script>
 <script>
 const OWNER_EMAIL = 'johnshpd@gmail.com';
 let currentUser = null;
 
+// If config.js loaded but didn't actually define `db` for some reason,
+// or failed to load entirely, surface that immediately instead of every
+// button silently doing nothing when clicked.
+if (typeof db === 'undefined'){
+  document.getElementById('configErr').style.display = 'block';
+  document.getElementById('configErr').textContent = 'db is undefined — js/config.js loaded but did not set up the Supabase client. Check its contents.';
+}
+
 async function init(){
-  const { data:{ session } } = await db.auth.getSession();
-  if (session && session.user.email === OWNER_EMAIL){
-    currentUser = session.user;
-    unlock();
+  if (typeof db === 'undefined') return;
+  try {
+    const { data:{ session } } = await db.auth.getSession();
+    if (session && session.user.email === OWNER_EMAIL){
+      currentUser = session.user;
+      unlock();
+    }
+  } catch(e){
+    document.getElementById('configErr').style.display = 'block';
+    document.getElementById('configErr').textContent = 'Session check failed: ' + e.message;
   }
 }
 
@@ -207,25 +222,31 @@ function unlock(){
 }
 
 document.getElementById('gateBtn').onclick = async () => {
-  const email = document.getElementById('gateEmail').value.trim();
-  const password = document.getElementById('gatePass').value;
   const errEl = document.getElementById('gateErr');
   errEl.style.display = 'none';
+  try {
+    if (typeof db === 'undefined') throw new Error('db is undefined — js/config.js did not load correctly.');
+    const email = document.getElementById('gateEmail').value.trim();
+    const password = document.getElementById('gatePass').value;
 
-  if (email.toLowerCase() !== OWNER_EMAIL){
-    errEl.textContent = 'This page is owner-only.';
-    errEl.style.display = 'block';
-    return;
-  }
+    if (email.toLowerCase() !== OWNER_EMAIL){
+      errEl.textContent = 'This page is owner-only.';
+      errEl.style.display = 'block';
+      return;
+    }
 
-  const { data, error } = await db.auth.signInWithPassword({ email, password });
-  if (error){
-    errEl.textContent = error.message;
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    if (error){
+      errEl.textContent = error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    currentUser = data.user;
+    unlock();
+  } catch(e){
+    errEl.textContent = 'Unexpected error: ' + e.message;
     errEl.style.display = 'block';
-    return;
   }
-  currentUser = data.user;
-  unlock();
 };
 
 document.getElementById('signOutBtn').onclick = async () => {
@@ -234,13 +255,20 @@ document.getElementById('signOutBtn').onclick = async () => {
 };
 
 async function handleGoogle(){
-  const { error } = await db.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: 'https://mpspulse.app/admin.html' }
-  });
-  if (error){
-    const errEl = document.getElementById('gateErr');
-    errEl.textContent = 'Google sign-in failed: ' + error.message;
+  const errEl = document.getElementById('gateErr');
+  errEl.style.display = 'none';
+  try {
+    if (typeof db === 'undefined') throw new Error('db is undefined — js/config.js did not load correctly.');
+    const { error } = await db.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: 'https://mpspulse.app/admin.html' }
+    });
+    if (error){
+      errEl.textContent = 'Google sign-in failed: ' + error.message;
+      errEl.style.display = 'block';
+    }
+  } catch(e){
+    errEl.textContent = 'Unexpected error: ' + e.message;
     errEl.style.display = 'block';
   }
 }
