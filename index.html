@@ -270,16 +270,12 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
     <div class="pt-copy">
       <h2>Start free.<br>Stay if it works.</h2>
       <p>7 days, full access, no card surprises. Cancel anytime before your trial ends and you won't be charged.</p>
-      <a href="auth.html" class="pt-link">See full plans & pricing →</a>
+      <a href="https://buy.stripe.com/00weVf1Jj6ve1PX7SLfIs06" class="pt-link">Start your free trial →</a>
     </div>
     <div class="pt-prices">
       <div class="pt-price-card">
         <div class="pt-price-name">Pro</div>
         <div class="pt-price-val">£4.99<span>/mo</span></div>
-      </div>
-      <div class="pt-price-card">
-        <div class="pt-price-name">Coach</div>
-        <div class="pt-price-val">£14.99<span>/mo</span></div>
       </div>
     </div>
   </div>
@@ -299,6 +295,25 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
     <div class="foot-meta">© 2026 PULSE · PROTEIN TIMING, NOT JUST TOTALS</div>
   </div>
 </footer>
+
+<script>
+// If a logged-in user was redirected here because their trial/subscription
+// lapsed (see dashboard.html), their email is passed as a query param so we
+// can prefill it at Stripe checkout — this helps the webhook match the
+// payment back to their existing Supabase account.
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  const email = params.get('email');
+  if (email) {
+    const link = document.querySelector('.pt-link');
+    if (link) {
+      const url = new URL(link.href);
+      url.searchParams.set('prefilled_email', email);
+      link.href = url.toString();
+    }
+  }
+})();
+</script>
 
 </body>
 </html>

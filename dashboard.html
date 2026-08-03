@@ -803,7 +803,7 @@ async function init(){
     // TODO: confirm final redirect target once the mpspulse.app domain swap
     // is decided — v1 sends this to index.html#pricing, but pulse-v2 has no
     // index.html of its own yet.
-    if (!hasAccess){ window.location.href = 'index.html#pricing'; return; }
+    if (!hasAccess){ window.location.href = 'index.html?email=' + encodeURIComponent(currentUser.email) + '#pricing'; return; }
   }
 
   const today = localDateString();
