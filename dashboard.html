@@ -44,7 +44,8 @@
   .daily-left b{ color:var(--g1); font-size:0.86rem; }
 
   .strip{ display:flex; gap:6px; margin-bottom:16px; }
-  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); cursor:pointer; position:relative; overflow:hidden; }
+  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.12s ease, box-shadow 0.12s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .segment.pressed, .collapsed-row.pressed{ transform:scale(0.96); box-shadow:0 0 0 2px rgba(79,70,229,0.25) inset; }
   .segment.active{ border-color:var(--g1); background:rgba(79,70,229,0.07); }
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
@@ -90,7 +91,7 @@
 
   .collapsed-list{ display:flex; flex-direction:column; gap:8px; }
   #pulseList{ display:flex; flex-direction:column; }
-  .collapsed-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; margin-bottom:8px; }
+  .collapsed-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; margin-bottom:8px; transition:transform 0.12s ease, box-shadow 0.12s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   .collapsed-row.hit{ border-color:rgba(22,163,74,0.3); }
   .collapsed-row.missed{ border-color:rgba(217,119,6,0.3); }
   .collapsed-dot{ width:9px; height:9px; border-radius:50%; background:var(--grey); flex-shrink:0; }
@@ -861,6 +862,13 @@ async function saveUserData(){
   }
 }
 
+// Tap feedback for pulse cards/rows — brief press-scale + haptic tick, then run the action.
+function pulseTapFeedback(el, action){
+  if (navigator.vibrate) { try { navigator.vibrate(10); } catch(e){} }
+  el.classList.add('pressed');
+  setTimeout(() => { action(); }, 90);
+}
+
 function render(){
   const active = activeSlotIndex();
   const dailyTotal = round1(state.slots.reduce((sum,slot)=>sum+slot.reduce((s,i)=>s+i.protein,0),0));
@@ -910,7 +918,7 @@ function render(){
         <div class="seg-pct">${total>0||status==='hit'?total+'g':'—'}${status==='hit'?' ✓':''}</div>
         <div class="seg-target">of ${target}g</div>
       </div>`;
-    seg.onclick = () => { expandedSlot = i; render(); };
+    seg.onclick = () => pulseTapFeedback(seg, () => { expandedSlot = i; render(); });
     stripEl.appendChild(seg);
   }
 
@@ -963,7 +971,7 @@ function render(){
         ${pulseRing(i, 18)}
         <div class="collapsed-info"><h5>Pulse ${i+1} · ${SLOT_NAMES[i]}</h5><span>${subtitle}</span></div>
         <div class="collapsed-stat">${total>0?total+'g':'—'}</div>`;
-      row.onclick = () => { expandedSlot = i; render(); };
+      row.onclick = () => pulseTapFeedback(row, () => { expandedSlot = i; render(); });
       listEl.appendChild(row);
     }
   }
