@@ -879,10 +879,14 @@ async function init(){
   const isOwner = currentUser.email === 'johnshpd@gmail.com';
   if (!isOwner){
     const hasAccess = await checkSubscription(currentUser.id);
-    // TODO: confirm final redirect target once the mpspulse.app domain swap
-    // is decided — v1 sends this to index.html#pricing, but pulse-v2 has no
-    // index.html of its own yet.
-    if (!hasAccess){ window.location.href = 'index.html?email=' + encodeURIComponent(currentUser.email) + '#pricing'; return; }
+    if (!hasAccess){
+      // Sign out before redirecting — otherwise the session stays alive and
+      // every future launch just bounces straight back here again, looping.
+      const failedEmail = currentUser.email;
+      await db.auth.signOut();
+      window.location.href = 'index.html?email=' + encodeURIComponent(failedEmail) + '#pricing';
+      return;
+    }
   }
 
   const today = localDateString();
