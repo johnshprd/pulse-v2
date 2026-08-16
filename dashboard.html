@@ -44,8 +44,8 @@
   .daily-left b{ color:var(--g1); font-size:0.86rem; }
 
   .strip{ display:flex; gap:6px; margin-bottom:16px; }
-  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.12s ease, box-shadow 0.12s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
-  .segment.pressed, .collapsed-row.pressed{ transform:scale(0.96); box-shadow:0 0 0 2px rgba(79,70,229,0.25) inset; }
+  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
   .segment.active{ border-color:var(--g1); background:rgba(79,70,229,0.07); }
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
@@ -91,7 +91,7 @@
 
   .collapsed-list{ display:flex; flex-direction:column; gap:8px; }
   #pulseList{ display:flex; flex-direction:column; }
-  .collapsed-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; margin-bottom:8px; transition:transform 0.12s ease, box-shadow 0.12s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .collapsed-row{ display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; margin-bottom:8px; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   .collapsed-row.hit{ border-color:rgba(22,163,74,0.3); }
   .collapsed-row.missed{ border-color:rgba(217,119,6,0.3); }
   .collapsed-dot{ width:9px; height:9px; border-radius:50%; background:var(--grey); flex-shrink:0; }
@@ -1001,11 +1001,11 @@ async function saveUserData(){
   }
 }
 
-// Tap feedback for pulse cards/rows — brief press-scale + haptic tick, then run the action.
+// Tap feedback for pulse cards/rows — visible press-scale + colour flash + haptic tick, then run the action.
 function pulseTapFeedback(el, action){
-  if (navigator.vibrate) { try { navigator.vibrate(10); } catch(e){} }
+  if (navigator.vibrate) { try { navigator.vibrate(15); } catch(e){} }
   el.classList.add('pressed');
-  setTimeout(() => { action(); }, 90);
+  setTimeout(() => { action(); }, 140);
 }
 
 function render(){
