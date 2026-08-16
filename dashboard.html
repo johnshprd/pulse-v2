@@ -256,6 +256,7 @@
       <div class="logo">PULSE</div>
       <div style="display:flex; align-items:center; gap:8px;">
         <button id="historyBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">📊</button>
+        <button id="settingsBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">⚙️</button>
         <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
       </div>
     </div>
@@ -398,6 +399,20 @@
     </div>
 
     <button class="btn-confirm" id="confirmGoalBtn">Save goal →</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="settingsSheetBackdrop"></div>
+<div class="sheet" id="settingsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Account</div>
+    <button class="sheet-close" id="settingsSheetClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div style="font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Signed in as</div>
+    <div style="font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--text); margin-bottom:22px; word-break:break-all;" id="settingsEmail">—</div>
+    <button class="onboarding-btn" id="signOutBtn" style="background:var(--surface2); color:var(--text); border:1.5px solid var(--border2);">Sign out</button>
   </div>
 </div>
 
@@ -2207,6 +2222,24 @@ document.getElementById('goalPill').onclick = openGoalSheet;
 document.getElementById('goalSheetClose').onclick = closeGoalSheet;
 document.getElementById('goalSheetBackdrop').onclick = closeGoalSheet;
 document.getElementById('confirmGoalBtn').onclick = saveGoal;
+
+// --- Settings / sign out ---
+function openSettingsSheet(){
+  document.getElementById('settingsEmail').textContent = currentUser ? currentUser.email : '—';
+  document.getElementById('settingsSheetBackdrop').classList.add('open');
+  document.getElementById('settingsSheet').classList.add('open');
+}
+function closeSettingsSheet(){
+  document.getElementById('settingsSheetBackdrop').classList.remove('open');
+  document.getElementById('settingsSheet').classList.remove('open');
+}
+document.getElementById('settingsBtn').onclick = openSettingsSheet;
+document.getElementById('settingsSheetClose').onclick = closeSettingsSheet;
+document.getElementById('settingsSheetBackdrop').onclick = closeSettingsSheet;
+document.getElementById('signOutBtn').onclick = async () => {
+  await db.auth.signOut();
+  window.location.href = 'auth.html';
+};
 
 document.getElementById('fabBtn').onclick = () => openSheet(activeSlotIndex());
 document.getElementById('sheetClose').onclick = closeSheet;
