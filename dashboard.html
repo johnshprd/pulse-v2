@@ -625,16 +625,16 @@ const SLOT_WINDOWS = [ [0,11], [11,16], [16,20], [20,24] ];
 function fmtHour(h){ return String(Math.floor(h)).padStart(2,'0')+':00'; }
 
 // Returns null if `ts` falls inside slotIdx's real-world window, otherwise
-// { type:'late'|'early', message } describing why it can't be logged there.
+// { type:'late'|'early', message } — informational only, doesn't block logging.
 function slotTimeIssue(slotIdx, ts){
   const [start,end] = SLOT_WINDOWS[slotIdx];
   const d = new Date(ts);
   const h = d.getHours() + d.getMinutes()/60;
   if (h >= end){
-    return { type:'late', message:`${SLOT_NAMES[slotIdx]}'s window is ${fmtHour(start)}–${fmtHour(end)} — that's already passed. Pick a time inside that window, or log this under a later pulse instead.` };
+    return { type:'late', message:`Heads up — ${SLOT_NAMES[slotIdx]}'s usual window is ${fmtHour(start)}–${fmtHour(end)}, and this time is after it. You can still log it here.` };
   }
   if (h < start){
-    return { type:'early', message:`${SLOT_NAMES[slotIdx]}'s window doesn't start until ${fmtHour(start)}. Pick a time inside ${fmtHour(start)}–${fmtHour(end)}, or log this under an earlier pulse instead.` };
+    return { type:'early', message:`Heads up — ${SLOT_NAMES[slotIdx]}'s usual window is ${fmtHour(start)}–${fmtHour(end)}, and this time is before it. You can still log it here.` };
   }
   return null;
 }
@@ -1261,8 +1261,9 @@ function saveEditItem(){
     const d = new Date(item.loggedAt); // keep the same original day, just change the time
     d.setHours(h,m,0,0);
     if (d.getTime() > Date.now()){ alert("Can't set a future time"); return; }
+    // Outside the pulse's real-world window is allowed — just a heads-up, not a block.
     const issue = slotTimeIssue(editingSlot, d.getTime());
-    if (issue){ alert('⚠️ '+issue.message); return; }
+    if (issue && !confirm('⚠️ '+issue.message+'\n\nSave anyway?')) return;
     loggedAt = d.toISOString();
   }
 
@@ -1759,8 +1760,9 @@ function resolveLogTime(slotIdx, entries, decisionContainerId){
 }
 
 function finalizeLog(slotIdx, entries, ts){
-  const issue = slotTimeIssue(slotIdx, ts);
-  if (issue){ alert('⚠️ '+issue.message); return; }
+  // Logging outside the pulse's real-world window is allowed — the inline
+  // warning (buildBackdateToggle) already flagged it before this point;
+  // we don't hard-block the confirm itself.
   if (!Array.isArray(entries)) entries = [entries];
   delete customLogTime[slotIdx];
   if (!state.slots[slotIdx]) state.slots[slotIdx] = [];
@@ -1782,8 +1784,8 @@ function buildBackdateToggle(toggleId, pickerId, inputId){
   toggle.style.color = '';
   toggle.style.fontWeight = '';
 
-  // Warn (and, on save, hard-block) if the time this would actually log at
-  // doesn't fall inside the selected pulse's real-world window.
+  // Warn (informational only — outside-window times are still allowed) if
+  // the time this would actually log at falls outside the pulse's usual window.
   let warnEl = document.getElementById(toggleId+'Warn');
   if (!warnEl){
     warnEl = document.createElement('div');
@@ -1795,20 +1797,9 @@ function buildBackdateToggle(toggleId, pickerId, inputId){
   const issue = effectiveTs ? slotTimeIssue(pendingSlot, effectiveTs) : null;
 
   if (issue){
-    const [start,end] = SLOT_WINDOWS[pendingSlot];
-    warnEl.textContent = '⚠️ '+issue.message+' Set a time in the box below ↓';
-    toggle.textContent = '🕐 TAP HERE TO SET A VALID TIME';
+    warnEl.textContent = '⚠️ '+issue.message;
     toggle.style.color = 'var(--amber)';
     toggle.style.fontWeight = '700';
-    // Surface the picker straight away, pre-filled with a valid suggestion,
-    // rather than leaving the person to hunt for the tiny toggle themselves.
-    if (!customLogTime[pendingSlot]){
-      const suggestedHour = Math.floor((start + Math.min(end, start+2)) / 2);
-      input.value = String(suggestedHour).padStart(2,'0')+':00';
-    } else {
-      input.value = customLogTime[pendingSlot];
-    }
-    picker.style.display = 'flex';
   } else {
     warnEl.textContent = '';
   }
@@ -1825,8 +1816,8 @@ function setBackdateTime(toggleId, pickerId, inputId){
   const [h,m] = input.value.split(':').map(Number);
   const d = new Date(); d.setHours(h,m,0,0);
   if (d.getTime() > Date.now()){ alert("Can't log a future time"); return; }
-  const issue = slotTimeIssue(pendingSlot, d.getTime());
-  if (issue){ alert(issue.message); return; }
+  // Outside the pulse's real-world window is allowed — buildBackdateToggle
+  // will still show the inline warning after this, it just won't block.
   customLogTime[pendingSlot] = input.value;
   document.getElementById(pickerId).style.display = 'none';
   buildBackdateToggle(toggleId, pickerId, inputId);
