@@ -157,7 +157,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
     <p class="hero-sub">Daily totals don't build muscle — timing does. Pulse tracks your protein across 4 daily windows, so every gram actually counts toward growth.</p>
     <div class="hero-actions">
       <a href="auth.html" class="btn-primary">START 7-DAY FREE TRIAL →</a>
-      <span class="hero-meta">No card required to start · Cancel anytime</span>
+      <span class="hero-meta">Card required to start · Cancel anytime, free for 7 days</span>
     </div>
 
     <div class="pulse-strip">
@@ -271,6 +271,16 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
       <h2>Start free.<br>Stay if it works.</h2>
       <p>7 days, full access, no card surprises. Cancel anytime before your trial ends and you won't be charged.</p>
       <a href="https://buy.stripe.com/00weVf1Jj6ve1PX7SLfIs06" class="pt-link">Start your free trial →</a>
+      <div style="margin-top:18px;">
+        <a href="#" id="testerCodeToggle" style="font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:1px; color:var(--muted2); text-decoration:underline;">Tester? Enter your invite code</a>
+      </div>
+      <div id="testerCodeForm" style="display:none; margin-top:16px; max-width:360px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px;">
+        <div style="font-family:'DM Sans',sans-serif; font-size:0.8rem; color:var(--muted2); margin-bottom:12px; line-height:1.4;">Sign up in the app first if you haven't already, then enter your email and invite code below — no card needed.</div>
+        <input type="email" id="testerEmailInput" placeholder="your@email.com" style="width:100%; box-sizing:border-box; font-family:'DM Sans',sans-serif; font-size:0.85rem; padding:10px 12px; border:1px solid var(--border2); border-radius:8px; margin-bottom:8px; background:var(--surface2); color:var(--text);">
+        <input type="text" id="testerCodeInput" placeholder="Invite code" style="width:100%; box-sizing:border-box; font-family:'DM Sans',sans-serif; font-size:0.85rem; padding:10px 12px; border:1px solid var(--border2); border-radius:8px; margin-bottom:10px; background:var(--surface2); color:var(--text);">
+        <button id="testerCodeSubmit" style="width:100%; background:var(--g1); color:#fff; border:none; border-radius:8px; padding:11px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.85rem; cursor:pointer;">Redeem code</button>
+        <div id="testerCodeMsg" style="font-family:'DM Sans',sans-serif; font-size:0.78rem; margin-top:10px; line-height:1.4;"></div>
+      </div>
     </div>
     <div class="pt-prices">
       <div class="pt-price-card">
@@ -311,7 +321,64 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
       url.searchParams.set('prefilled_email', email);
       link.href = url.toString();
     }
+    const testerEmailInput = document.getElementById('testerEmailInput');
+    if (testerEmailInput) testerEmailInput.value = email;
   }
+})();
+
+// --- Tester invite code redemption — bypasses Stripe entirely, grants
+// 'tester' status directly via the redeem-tester-code Edge Function. ---
+(function(){
+  const toggle = document.getElementById('testerCodeToggle');
+  const form = document.getElementById('testerCodeForm');
+  const submitBtn = document.getElementById('testerCodeSubmit');
+  const msgEl = document.getElementById('testerCodeMsg');
+  if (!toggle || !form) return;
+
+  toggle.addEventListener('click', function(e){
+    e.preventDefault();
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  });
+
+  submitBtn.addEventListener('click', async function(){
+    const email = document.getElementById('testerEmailInput').value.trim();
+    const code = document.getElementById('testerCodeInput').value.trim();
+    msgEl.style.color = 'var(--muted2)';
+    msgEl.textContent = '';
+
+    if (!email || !code){
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = 'Enter both your email and invite code.';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Checking…';
+
+    try {
+      const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/redeem-tester-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success){
+        msgEl.style.color = 'var(--g1)';
+        msgEl.innerHTML = "You're in! <a href=\"auth.html?email=" + encodeURIComponent(email) + "\" style=\"color:var(--g1); text-decoration:underline;\">Sign in to Pulse now →</a>";
+        submitBtn.textContent = 'Redeemed';
+      } else {
+        msgEl.style.color = '#dc2626';
+        msgEl.textContent = data.error || 'Something went wrong — try again.';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Redeem code';
+      }
+    } catch (err){
+      msgEl.style.color = '#dc2626';
+      msgEl.textContent = 'Network error — try again.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Redeem code';
+    }
+  });
 })();
 </script>
 

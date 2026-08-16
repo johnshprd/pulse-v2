@@ -250,6 +250,16 @@ const SUPABASE_URL = 'https://xcfxizkflleeahjguviq.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhjZnhpemtmbGxlZWFoamd1dmlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTA2ODMsImV4cCI6MjA5NjE4NjY4M30.FhufokzAT16n6zuL9pGn9QHjkENoijU3Wc_umvXEzjQ';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// Prefill the sign-in email if ?email= is present (e.g. after redeeming a
+// tester invite code on the landing page, or bouncing back from a lapsed trial).
+(function(){
+  const email = new URLSearchParams(window.location.search).get('email');
+  if (email){
+    document.getElementById('login-email').value = email;
+    document.getElementById('signup-email').value = email;
+  }
+})();
+
 function switchTab(tab) {
   document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
   document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
