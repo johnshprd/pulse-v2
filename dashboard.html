@@ -118,6 +118,29 @@
   .sheet-close{ background:var(--surface2); border:none; width:28px; height:28px; border-radius:50%; color:var(--muted2); cursor:pointer; }
   .sheet-body{ padding:16px 18px; }
 
+  /* Onboarding overlay — shown once for brand-new users before their first dashboard render */
+  .onboarding-overlay{ position:fixed; inset:0; background:var(--bg,#f7f8fc); z-index:200; display:none; flex-direction:column; }
+  .onboarding-overlay.open{ display:flex; }
+  .onboarding-panels{ flex:1; position:relative; overflow:hidden; }
+  .onboarding-panel{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 28px; }
+  .onboarding-panel.active{ display:flex; }
+  .onboarding-emoji{ font-size:3.4rem; margin-bottom:18px; }
+  .onboarding-title{ font-family:'DM Sans',sans-serif; font-weight:800; font-size:1.5rem; color:var(--text); margin-bottom:12px; line-height:1.25; }
+  .onboarding-body{ font-family:'DM Sans',sans-serif; font-size:0.92rem; color:var(--muted2); line-height:1.55; max-width:340px; }
+  .onboarding-pulses-demo{ display:flex; gap:8px; margin:22px 0 6px; }
+  .onboarding-pulses-demo span{ width:46px; height:46px; border-radius:10px; border:1.5px solid var(--border2); background:var(--surface); display:flex; align-items:center; justify-content:center; font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); }
+  .onboarding-pulses-demo span.lit{ border-color:var(--g1); background:rgba(79,70,229,0.08); color:var(--g1); font-weight:700; }
+  .onboarding-footer{ padding:18px 24px 28px; }
+  .onboarding-dots{ display:flex; justify-content:center; gap:6px; margin-bottom:16px; }
+  .onboarding-dots span{ width:6px; height:6px; border-radius:50%; background:var(--border2); transition:background 0.2s ease, width 0.2s ease; }
+  .onboarding-dots span.active{ background:var(--g1); width:18px; border-radius:3px; }
+  .onboarding-btn{ width:100%; background:var(--g1); color:#fff; border:none; border-radius:14px; padding:15px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.95rem; cursor:pointer; }
+  .onboarding-skip{ display:block; width:100%; text-align:center; background:none; border:none; margin-top:10px; font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; }
+  .onboarding-goal-field{ display:flex; align-items:baseline; gap:8px; border:1.5px solid var(--border2); border-radius:14px; padding:14px 16px; margin:20px 0 4px; }
+  .onboarding-goal-field input{ border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-weight:800; font-size:1.8rem; color:var(--text); width:100%; text-align:center; }
+  .onboarding-goal-field span{ font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); white-space:nowrap; }
+  .onboarding-goal-hint{ font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted2); margin-bottom:4px; }
+
   .search-bar{ display:flex; align-items:center; gap:8px; background:var(--surface2); border:1.5px solid var(--border2); border-radius:12px; padding:11px 13px; margin-bottom:12px; }
   .search-bar input{ border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.88rem; color:var(--text); width:100%; }
   .food-result{ display:flex; align-items:center; gap:12px; padding:10px 4px; border-bottom:1px solid var(--border); cursor:pointer; }
@@ -186,6 +209,46 @@
 <body>
 
 <div id="loading"><div class="loading-logo">PULSE</div></div>
+
+<div class="onboarding-overlay" id="onboardingOverlay">
+  <div class="onboarding-panels">
+
+    <div class="onboarding-panel active" data-panel="0">
+      <div class="onboarding-emoji">💪</div>
+      <div class="onboarding-title">Welcome to Pulse</div>
+      <div class="onboarding-body">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
+    </div>
+
+    <div class="onboarding-panel" data-panel="1">
+      <div class="onboarding-emoji">⏱️</div>
+      <div class="onboarding-title">Four pulses a day</div>
+      <div class="onboarding-body">Your daily goal is split across 4 windows — breakfast, lunch, dinner and evening. Log a meal and a 3-hour MPS window opens for that pulse.</div>
+      <div class="onboarding-pulses-demo">
+        <span class="lit">P1</span><span>P2</span><span>P3</span><span>P4</span>
+      </div>
+    </div>
+
+    <div class="onboarding-panel" data-panel="2">
+      <div class="onboarding-emoji">🎯</div>
+      <div class="onboarding-title">Set your daily goal</div>
+      <div class="onboarding-body">We'll split this evenly across your 4 pulses. You can change it any time from the GOAL button.</div>
+      <div class="onboarding-goal-hint">BETWEEN 40G AND 400G</div>
+      <div class="onboarding-goal-field">
+        <input type="number" id="onboardingGoalInput" inputmode="decimal" value="150">
+        <span>g / day</span>
+      </div>
+      <div id="onboardingGoalError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px;"></div>
+    </div>
+
+  </div>
+  <div class="onboarding-footer">
+    <div class="onboarding-dots" id="onboardingDots">
+      <span class="active"></span><span></span><span></span>
+    </div>
+    <button class="onboarding-btn" id="onboardingNextBtn">Next</button>
+    <button class="onboarding-skip" id="onboardingSkipBtn">Skip</button>
+  </div>
+</div>
 
 <div id="app" style="display:none;">
   <div class="sticky-header">
@@ -809,6 +872,7 @@ async function init(){
 
   const today = localDateString();
   const { data } = await db.from('user_data').select('*').eq('user_id', currentUser.id).single();
+  const isNewUser = !data; // no user_data row yet — first ever launch for this account
   if (data){
     state.goal = data.goal || 150;
     state.slotTargets = data.slot_targets || distributeGoal(state.goal);
@@ -838,9 +902,65 @@ async function init(){
   setInterval(checkMidnight, 60000);
 
   document.getElementById('loading').style.display = 'none';
+
+  if (isNewUser){
+    startOnboarding();
+  } else {
+    document.getElementById('app').style.display = 'flex';
+    render();
+  }
+}
+
+// --- First-run onboarding — shown once, only when no user_data row exists yet ---
+let onboardingStep = 0;
+const ONBOARDING_STEPS = 3;
+
+function startOnboarding(){
+  onboardingStep = 0;
+  document.getElementById('onboardingGoalInput').value = 150;
+  document.getElementById('onboardingGoalError').textContent = '';
+  updateOnboardingUI();
+  document.getElementById('onboardingOverlay').classList.add('open');
+}
+
+function updateOnboardingUI(){
+  document.querySelectorAll('.onboarding-panel').forEach(p => {
+    p.classList.toggle('active', Number(p.dataset.panel) === onboardingStep);
+  });
+  document.querySelectorAll('#onboardingDots span').forEach((d,i) => {
+    d.classList.toggle('active', i === onboardingStep);
+  });
+  document.getElementById('onboardingNextBtn').textContent =
+    onboardingStep === ONBOARDING_STEPS - 1 ? 'Start Pulsing' : 'Next';
+}
+
+async function finishOnboarding(goalValue){
+  state.goal = goalValue;
+  state.slotTargets = distributeGoal(goalValue);
+  document.getElementById('onboardingOverlay').classList.remove('open');
   document.getElementById('app').style.display = 'flex';
+  await saveUserData(); // creates the user_data row for this account
   render();
 }
+
+document.getElementById('onboardingNextBtn').onclick = () => {
+  if (onboardingStep < ONBOARDING_STEPS - 1){
+    onboardingStep++;
+    updateOnboardingUI();
+    return;
+  }
+  const v = parseInt(document.getElementById('onboardingGoalInput').value);
+  if (!v || v<40 || v>400){
+    document.getElementById('onboardingGoalError').textContent = 'Enter a goal between 40–400g';
+    return;
+  }
+  finishOnboarding(v);
+};
+
+document.getElementById('onboardingSkipBtn').onclick = () => {
+  const v = parseInt(document.getElementById('onboardingGoalInput').value) || 150;
+  finishOnboarding(Math.max(40, Math.min(400, v)));
+};
 
 function checkMidnight(){
   const stored = localStorage.getItem('pulse_date');
