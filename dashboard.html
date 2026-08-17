@@ -1002,8 +1002,10 @@ async function init(){
     render();
   }
 
-  // Fire-and-forget — don't block the dashboard rendering on permission prompts.
-  subscribeToPush();
+  // DISABLED until the Android rebuild with fixed notification delegation ships (v12) —
+  // right now this prompt falls back to Chrome-level permission instead of the app,
+  // so it can't actually deliver pushes yet. Just flip this back on once v12 is live.
+  // subscribeToPush();
 }
 
 // --- First-run onboarding — shown once, only when no user_data row exists yet ---
