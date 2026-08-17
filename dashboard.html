@@ -696,6 +696,79 @@ function round1(n){ return Math.round(n*10)/10; }
 
 const MPS_DURATION_MS = 3 * 60 * 60 * 1000; // same 3-hour MPS window as the live app
 
+// --- Push notifications: "your MPS window closed, ready for your next pulse" ---
+// Server side (send-pulse-notification Edge Function + pg_cron) already exists.
+// This just wires the client: register SW, subscribe, and schedule a row in
+// scheduled_notifications for MPS_DURATION_MS after each logged entry.
+
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i=0;i<raw.length;i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+async function subscribeToPush(){
+  try{
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.register('/sw.js');
+
+    if (Notification.permission === 'default'){
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') return;
+    }
+    if (Notification.permission !== 'granted') return;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const raw = sub.toJSON();
+
+    // Replace any existing subscriptions for this user (simplest — avoids
+    // duplicate pushes if they reinstall or the endpoint rotates).
+    await db.from('push_subscriptions').delete().eq('user_id', currentUser.id);
+    await db.from('push_subscriptions').insert({
+      user_id: currentUser.id,
+      endpoint: raw.endpoint,
+      p256dh: raw.keys.p256dh,
+      auth: raw.keys.auth
+    });
+  } catch(e){
+    console.log('Push subscribe skipped:', e.message);
+  }
+}
+
+// (Re)schedules the "window closed, ready for your next pulse" push for
+// MPS_DURATION_MS after the slot's actual latest entry — matching the same
+// getMpsState logic the UI uses — and clears any now-stale pending one for
+// that slot. Called after any add/edit/delete that could shift the slot's
+// window (finalizeLog, saveEditItem, deleteEditItem, removeItem).
+async function scheduleWindowCloseNotification(slotIdx){
+  try{
+    await db.from('scheduled_notifications').delete()
+      .eq('user_id', currentUser.id).eq('slot_index', slotIdx).eq('sent', false);
+
+    const entries = state.slots[slotIdx] || [];
+    if (!entries.length) return; // slot now empty (last item deleted) — nothing to schedule
+
+    const latest = Math.max(...entries.map(e => new Date(e.loggedAt).getTime()));
+    await db.from('scheduled_notifications').insert({
+      user_id: currentUser.id,
+      slot_index: slotIdx,
+      scheduled_for: new Date(latest + MPS_DURATION_MS).toISOString(),
+      sent: false
+    });
+  } catch(e){
+    console.log('Notification schedule skipped:', e.message);
+  }
+}
+
 function slotTotal(i){
   return round1((state.slots[i]||[]).reduce((sum,item)=>sum+item.protein,0));
 }
@@ -928,6 +1001,9 @@ async function init(){
     document.getElementById('app').style.display = 'flex';
     render();
   }
+
+  // Fire-and-forget — don't block the dashboard rendering on permission prompts.
+  subscribeToPush();
 }
 
 // --- First-run onboarding — shown once, only when no user_data row exists yet ---
@@ -1119,6 +1195,7 @@ function render(){
 function removeItem(slotIdx, itemIdx){
   state.slots[slotIdx].splice(itemIdx,1);
   saveUserData();
+  scheduleWindowCloseNotification(slotIdx);
   render();
 }
 
@@ -1308,6 +1385,7 @@ function saveEditItem(){
   const p100ToStore = item.p100 != null ? item.p100 : (editingP100 != null ? editingP100 : (grams>0 ? round1((protein/grams)*100) : null));
   state.slots[editingSlot][editingIdx] = { ...item, ...macroFields, ...noteField, name, grams, protein, loggedAt, icon: editingIcon, p100: p100ToStore };
   saveUserData();
+  scheduleWindowCloseNotification(editingSlot);
   closeEditItem();
   render();
 }
@@ -1316,6 +1394,7 @@ function deleteEditItem(){
   if (editingSlot===null || editingIdx===null) return;
   state.slots[editingSlot].splice(editingIdx,1);
   saveUserData();
+  scheduleWindowCloseNotification(editingSlot);
   closeEditItem();
   render();
 }
@@ -1770,6 +1849,7 @@ function finalizeLog(slotIdx, entries, ts){
     state.slots[slotIdx].push({ ...entry, loggedAt: new Date(ts).toISOString() });
   });
   saveUserData();
+  scheduleWindowCloseNotification(slotIdx);
   expandedSlot = slotIdx;
   closeSheet();
   render();
