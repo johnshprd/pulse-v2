@@ -190,15 +190,15 @@
 
   /* Quick-action chips on an empty pulse — repeat last meal / favourites,
      so logging doesn't always require opening the full search sheet. */
-  .quick-actions{ margin-top:12px; }
+  .quick-actions{ margin-top:14px; background:var(--surface2); border-radius:14px; padding:12px 14px; }
   .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
-  .quick-actions-sub{ font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-bottom:8px; }
-  .quick-chip{ display:flex; align-items:center; gap:10px; background:transparent; border:1.5px dashed var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; cursor:pointer; }
-  .quick-chip:active{ background:rgba(79,70,229,0.06); border-color:var(--g1); border-style:solid; }
-  .quick-chip .quick-icon{ font-size:1.1rem; flex-shrink:0; opacity:0.7; }
-  .quick-chip .quick-name{ flex:1; min-width:0; font-family:'DM Sans',sans-serif; font-size:0.84rem; font-weight:400; color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .quick-chip .quick-protein{ font-family:'Space Mono',monospace; font-size:0.74rem; color:var(--muted); flex-shrink:0; }
-  .quick-chip .quick-plus{ font-family:'DM Sans',sans-serif; font-size:0.78rem; font-weight:700; color:var(--g1); flex-shrink:0; margin-left:2px; }
+  .quick-actions-sub{ font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-bottom:10px; }
+  .quick-pills{ display:flex; flex-wrap:wrap; gap:8px; }
+  .quick-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--surface); border:1.5px solid var(--g1); border-radius:999px; padding:7px 13px; cursor:pointer; }
+  .quick-pill:active{ background:var(--g1); }
+  .quick-pill:active .quick-pill-text, .quick-pill:active .quick-icon{ color:#fff !important; }
+  .quick-pill .quick-icon{ font-size:0.9rem; flex-shrink:0; }
+  .quick-pill .quick-pill-text{ font-family:'DM Sans',sans-serif; font-size:0.78rem; font-weight:600; color:var(--g1); white-space:nowrap; }
 
   .method-btn{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1.5px solid var(--border2); border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
   .method-btn.primary{ border-color:var(--g1); background:rgba(79,70,229,0.06); }
@@ -1530,27 +1530,25 @@ function buildQuickActionsHtml(slotIdx){
   const favs = state.favourites.slice(0,2);
   if (!repeat && !favs.length) return '';
 
-  let chips = '';
+  const shortName = (n, max=18) => n.length > max ? n.slice(0,max-1)+'…' : n;
+
+  let pills = '';
   if (repeat){
     const grams = repeat.grams;
     const protein = round1((grams/100)*repeat.p100);
-    chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">
+    pills += `<div class="quick-pill" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">
       <span class="quick-icon">↻</span>
-      <span class="quick-name">Repeat: ${repeat.name}</span>
-      <span class="quick-protein">~${protein}g</span>
-      <span class="quick-plus">+ Log</span>
+      <span class="quick-pill-text">${shortName(repeat.name)} · ~${protein}g</span>
     </div>`;
   }
   favs.forEach(f => {
-    chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">
-      <span class="quick-icon">⭐</span>
-      <span class="quick-name">${f.name}</span>
-      <span class="quick-protein">~${round1((f.typical/100)*f.p100)}g</span>
-      <span class="quick-plus">+ Log</span>
+    pills += `<div class="quick-pill" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">
+      <span class="quick-icon">${f.icon}</span>
+      <span class="quick-pill-text">${shortName(f.name)} · ~${round1((f.typical/100)*f.p100)}g</span>
     </div>`;
   });
 
-  return `<div class="quick-actions"><div class="quick-actions-label">Quick log</div><div class="quick-actions-sub">Not logged yet — tap one to add it</div>${chips}</div>`;
+  return `<div class="quick-actions"><div class="quick-actions-label">⚡ Quick log</div><div class="quick-actions-sub">Tap to log instantly — nothing here is saved yet</div><div class="quick-pills">${pills}</div></div>`;
 }
 
 function closeSheet(){
