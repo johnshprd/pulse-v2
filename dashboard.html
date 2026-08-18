@@ -507,6 +507,8 @@
         <label class="field-label">Food name</label>
         <div class="field-input"><input id="addFoodName" placeholder="e.g. Mum's shepherd pie"></div>
       </div>
+      <button type="button" id="estimateFoodBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:rgba(79,70,229,0.08); border:1px solid var(--g1); color:var(--g1); border-radius:10px; padding:10px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; margin-bottom:14px;">✨ Estimate with AI</button>
+      <div id="estimateFoodNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.74rem; color:var(--muted2); margin:-8px 0 14px; line-height:1.4;"></div>
       <div class="field">
         <label class="field-label">Icon</label>
         <button type="button" id="addFoodIconBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; width:44px; height:44px; font-size:1.3rem; cursor:pointer;">🍽️</button>
@@ -1658,6 +1660,7 @@ function openAddFood(){
   document.getElementById('addFoodKcal').value = '';
   document.getElementById('addFoodNotes').value = searchVal ? (state.foodNotes[searchVal.toLowerCase()] || '') : '';
   document.getElementById('addFoodError').style.display = 'none';
+  document.getElementById('estimateFoodNote').style.display = 'none';
   addFoodIcon = '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
@@ -1789,6 +1792,56 @@ document.getElementById('backToMethodFromAddFood').onclick = () => {
   else { showStep('stepMethod', 'Add meal'); }
 };
 document.getElementById('saveAddFoodBtn').onclick = saveAddFood;
+
+async function estimateFoodWithAI(){
+  const name = document.getElementById('addFoodName').value.trim();
+  const noteEl = document.getElementById('estimateFoodNote');
+  if (!name){
+    noteEl.style.display = 'block';
+    noteEl.style.color = '#e5484d';
+    noteEl.textContent = 'Type a food name first.';
+    return;
+  }
+  const btn = document.getElementById('estimateFoodBtn');
+  const originalLabel = btn.textContent;
+  btn.textContent = '✨ Estimating…';
+  btn.disabled = true;
+  noteEl.style.display = 'none';
+
+  try{
+    const notes = document.getElementById('addFoodNotes').value.trim();
+    const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/estimate-food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ foodName: name, notes })
+    });
+    const data = await res.json();
+    if (data.error || !data.estimate) throw new Error(data.error || 'No estimate returned');
+
+    const e = data.estimate;
+    if (e.icon){ addFoodIcon = e.icon; document.getElementById('addFoodIconBtn').textContent = e.icon; }
+    if (e.p100 != null) document.getElementById('addFoodProtein').value = round1(e.p100);
+    if (e.typical != null) document.getElementById('addFoodTypical').value = Math.round(e.typical);
+    if (e.c100 != null) document.getElementById('addFoodCarbs').value = round1(e.c100);
+    if (e.f100 != null) document.getElementById('addFoodFat').value = round1(e.f100);
+    if (e.kcal100 != null) document.getElementById('addFoodKcal').value = Math.round(e.kcal100);
+
+    noteEl.style.display = 'block';
+    noteEl.style.color = 'var(--muted2)';
+    noteEl.textContent = e.confidence === 'low'
+      ? '⚠️ Rough guess — that description was a bit vague, worth double-checking these numbers.'
+      : '✓ AI estimate filled in below — check it and adjust anything that looks off.';
+  } catch(err){
+    noteEl.style.display = 'block';
+    noteEl.style.color = '#e5484d';
+    noteEl.textContent = "Couldn't get an estimate — enter the values manually below.";
+    console.log('Food estimate failed:', err.message);
+  } finally {
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }
+}
+document.getElementById('estimateFoodBtn').onclick = estimateFoodWithAI;
 
 // Cache of USDA results actually shown, so selectFood can find them by id
 let lastUsdaResults = [];
