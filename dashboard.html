@@ -555,6 +555,8 @@
         <label class="field-label">Food name</label>
         <div class="field-input"><input id="typeInName" placeholder="e.g. Homemade chilli"></div>
       </div>
+      <button type="button" id="estimateTypeInBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; background:rgba(79,70,229,0.08); border:1px solid var(--g1); color:var(--g1); border-radius:10px; padding:10px; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.82rem; cursor:pointer; margin-bottom:14px;">✨ Estimate with AI</button>
+      <div id="estimateTypeInNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.74rem; color:var(--muted2); margin:-8px 0 14px; line-height:1.4;"></div>
       <div class="row2">
         <div class="field">
           <label class="field-label">Portion</label>
@@ -2494,7 +2496,55 @@ document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnGallery').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
-document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; document.getElementById('estimateTypeInNote').style.display='none'; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+
+async function estimateTypeInProtein(){
+  const name = document.getElementById('typeInName').value.trim();
+  const noteEl = document.getElementById('estimateTypeInNote');
+  if (!name){
+    noteEl.style.display = 'block';
+    noteEl.style.color = '#e5484d';
+    noteEl.textContent = 'Type a food name first.';
+    return;
+  }
+  const grams = parseFloat(document.getElementById('typeInGrams').value) || 150;
+  const btn = document.getElementById('estimateTypeInBtn');
+  const originalLabel = btn.textContent;
+  btn.textContent = '✨ Estimating…';
+  btn.disabled = true;
+  noteEl.style.display = 'none';
+
+  try{
+    const notes = document.getElementById('typeInNotes').value.trim();
+    const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/estimate-food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ foodName: name, notes: notes ? `${notes} — portion is ${grams}g` : `portion is ${grams}g` })
+    });
+    const data = await res.json();
+    if (data.error || !data.estimate) throw new Error(data.error || 'No estimate returned');
+
+    const e = data.estimate;
+    if (e.p100 != null){
+      document.getElementById('typeInProtein').value = round1((e.p100/100) * grams);
+    }
+
+    noteEl.style.display = 'block';
+    noteEl.style.color = 'var(--muted2)';
+    noteEl.textContent = e.confidence === 'low'
+      ? `⚠️ Rough guess for ${grams}g — that description was a bit vague, worth double-checking.`
+      : `✓ Estimated for your ${grams}g portion — check it and adjust if needed.`;
+  } catch(err){
+    noteEl.style.display = 'block';
+    noteEl.style.color = '#e5484d';
+    noteEl.textContent = "Couldn't get an estimate — enter the protein manually.";
+    console.log('Type-in estimate failed:', err.message);
+  } finally {
+    btn.textContent = originalLabel;
+    btn.disabled = false;
+  }
+}
+document.getElementById('estimateTypeInBtn').onclick = estimateTypeInProtein;
 
 document.getElementById('foodSearchInput').oninput = (e) => renderFoodResults(e.target.value);
 document.getElementById('backToMethodFromFav').onclick = () => showStep('stepMethod','Add meal');
