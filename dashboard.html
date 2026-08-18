@@ -191,12 +191,14 @@
   /* Quick-action chips on an empty pulse — repeat last meal / favourites,
      so logging doesn't always require opening the full search sheet. */
   .quick-actions{ margin-top:12px; }
-  .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
-  .quick-chip{ display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; cursor:pointer; }
-  .quick-chip:active{ background:rgba(79,70,229,0.08); border-color:var(--g1); }
-  .quick-chip .quick-icon{ font-size:1.1rem; flex-shrink:0; }
-  .quick-chip .quick-name{ flex:1; min-width:0; font-family:'DM Sans',sans-serif; font-size:0.84rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .quick-chip .quick-protein{ font-family:'Space Mono',monospace; font-size:0.74rem; color:var(--g1); flex-shrink:0; }
+  .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
+  .quick-actions-sub{ font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-bottom:8px; }
+  .quick-chip{ display:flex; align-items:center; gap:10px; background:transparent; border:1.5px dashed var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; cursor:pointer; }
+  .quick-chip:active{ background:rgba(79,70,229,0.06); border-color:var(--g1); border-style:solid; }
+  .quick-chip .quick-icon{ font-size:1.1rem; flex-shrink:0; opacity:0.7; }
+  .quick-chip .quick-name{ flex:1; min-width:0; font-family:'DM Sans',sans-serif; font-size:0.84rem; font-weight:400; color:var(--muted2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .quick-chip .quick-protein{ font-family:'Space Mono',monospace; font-size:0.74rem; color:var(--muted); flex-shrink:0; }
+  .quick-chip .quick-plus{ font-family:'DM Sans',sans-serif; font-size:0.78rem; font-weight:700; color:var(--g1); flex-shrink:0; margin-left:2px; }
 
   .method-btn{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1.5px solid var(--border2); border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
   .method-btn.primary{ border-color:var(--g1); background:rgba(79,70,229,0.06); }
@@ -1535,18 +1537,20 @@ function buildQuickActionsHtml(slotIdx){
     chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">
       <span class="quick-icon">↻</span>
       <span class="quick-name">Repeat: ${repeat.name}</span>
-      <span class="quick-protein">${protein}g</span>
+      <span class="quick-protein">~${protein}g</span>
+      <span class="quick-plus">+ Log</span>
     </div>`;
   }
   favs.forEach(f => {
     chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">
       <span class="quick-icon">⭐</span>
       <span class="quick-name">${f.name}</span>
-      <span class="quick-protein">${round1((f.typical/100)*f.p100)}g</span>
+      <span class="quick-protein">~${round1((f.typical/100)*f.p100)}g</span>
+      <span class="quick-plus">+ Log</span>
     </div>`;
   });
 
-  return `<div class="quick-actions"><div class="quick-actions-label">Quick log</div>${chips}</div>`;
+  return `<div class="quick-actions"><div class="quick-actions-label">Quick log</div><div class="quick-actions-sub">Not logged yet — tap one to add it</div>${chips}</div>`;
 }
 
 function closeSheet(){
