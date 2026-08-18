@@ -188,6 +188,16 @@
   .btn-confirm.btn-confirm-sticky{ position:sticky; bottom:0; margin-top:14px; box-shadow:0 -10px 14px -6px rgba(0,0,0,0.10); }
   .btn-back{ background:none; border:none; color:var(--muted2); font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; margin-bottom:12px; padding:0; }
 
+  /* Quick-action chips on an empty pulse — repeat last meal / favourites,
+     so logging doesn't always require opening the full search sheet. */
+  .quick-actions{ margin-top:12px; }
+  .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .quick-chip{ display:flex; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--border2); border-radius:10px; padding:10px 12px; margin-bottom:6px; cursor:pointer; }
+  .quick-chip:active{ background:rgba(79,70,229,0.08); border-color:var(--g1); }
+  .quick-chip .quick-icon{ font-size:1.1rem; flex-shrink:0; }
+  .quick-chip .quick-name{ flex:1; min-width:0; font-family:'DM Sans',sans-serif; font-size:0.84rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .quick-chip .quick-protein{ font-family:'Space Mono',monospace; font-size:0.74rem; color:var(--g1); flex-shrink:0; }
+
   .method-btn{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1.5px solid var(--border2); border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
   .method-btn.primary{ border-color:var(--g1); background:rgba(79,70,229,0.06); }
   .method-icon{ width:44px; height:44px; border-radius:11px; background:var(--g1); display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
@@ -260,6 +270,7 @@
     <div class="topbar">
       <div class="logo">PULSE</div>
       <div style="display:flex; align-items:center; gap:8px;">
+        <button id="infoBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">ℹ️</button>
         <button id="historyBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">📊</button>
         <button id="settingsBtn" style="background:var(--surface2); border:1px solid var(--border2); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; font-size:1rem; cursor:pointer;">⚙️</button>
         <div class="goal-pill" id="goalPill" style="cursor:pointer;"><span>GOAL</span><span id="goalVal">—</span><span style="color:var(--muted); font-size:0.7rem; margin-left:2px;">✎</span></div>
@@ -273,7 +284,8 @@
       <div class="daily-total"><span class="val" id="dailyTotal">0</span><span class="of">/ <span id="dailyGoalInline">0</span>g today</span></div>
       <div class="daily-left">LEFT<br><b id="dailyLeft">0g</b></div>
     </div>
-    <div id="pulseTargetHint" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:0.5px; margin:-8px 2px 14px;"></div>
+    <div id="pulseTargetHint" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:0.5px; margin:-8px 2px 4px;"></div>
+    <div id="weekStreak" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--g1); letter-spacing:0.5px; margin:0 2px 14px;"></div>
 
     <div class="strip" id="strip"></div>
     <div id="pulseList"></div>
@@ -418,6 +430,20 @@
     <div style="font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Signed in as</div>
     <div style="font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--text); margin-bottom:22px; word-break:break-all;" id="settingsEmail">—</div>
     <button class="onboarding-btn" id="signOutBtn" style="background:var(--surface2); color:var(--text); border:1.5px solid var(--border2);">Sign out</button>
+  </div>
+</div>
+
+<div class="sheet-backdrop" id="infoSheetBackdrop"></div>
+<div class="sheet" id="infoSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">How Pulse works</div>
+    <button class="sheet-close" id="infoSheetClose">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="onboarding-body" style="margin-bottom:20px;">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
+    <div class="onboarding-body" style="margin-bottom:20px;">Your daily goal is split across 4 windows — breakfast, lunch, dinner and evening. Log a meal and a 3-hour MPS window opens for that pulse — that's the stretch of time your body is actively building muscle off that meal.</div>
+    <div class="onboarding-body">Hitting your protein target inside each window (not just somewhere across the day) is what the 4 pulses are for. Missing a window doesn't undo your progress — it just means that particular pulse didn't hit its target.</div>
   </div>
 </div>
 
@@ -1111,6 +1137,14 @@ function render(){
     ? state.goal+'g ÷ 4 pulses ≈ '+targets[0]+'g each'
     : state.goal+'g ÷ 4 pulses ≈ '+targets.join('g · ')+'g';
 
+  // Days this week (of the 7 tracked) where the daily total met the
+  // *current* goal — a simple, always-correct metric since it doesn't try
+  // to reconstruct what the goal was on days it may have been different.
+  const daysHit = state.weekHistory.filter(v => v >= state.goal).length;
+  document.getElementById('weekStreak').textContent = daysHit > 0
+    ? `🔥 ${daysHit}/7 days hit your goal this week`
+    : '';
+
   // Coach message — ported directly from the live app's updateCoach()
   updateCoach();
 
@@ -1170,7 +1204,7 @@ function render(){
         <div class="expanded-sub">${items.length===0?'Nothing logged yet':total+'g logged'} · <b>${round1(Math.max(0,target-total))}g</b> to go for this pulse</div>
         <button class="btn-log-meal" onclick="openSheet(${i})">+ Log meal for ${SLOT_NAMES[i].toLowerCase()}</button>
         ${items.length===0
-          ? `<div class="empty-state">No meals logged for this pulse yet.</div>`
+          ? `<div class="empty-state">No meals logged for this pulse yet.</div>${buildQuickActionsHtml(i)}`
           : items.map((item,idx)=>`
             <div class="logged-item" onclick="openEditItem(${i},${idx})" style="cursor:pointer;">
               <div class="logged-swatch">${item.icon||'🍽️'}</div>
@@ -1435,6 +1469,69 @@ function openSheet(slotIdx){
   document.getElementById('sheetBackdrop').classList.add('open');
   document.getElementById('sheet').classList.add('open');
   showStep('stepMethod', 'Add meal');
+}
+
+// Most recently logged item across all 4 pulses today that has a real
+// protein-per-100g ratio (custom foods / USDA results) — manually typed-in
+// entries have no ratio (p100: null) so can't be scaled to a fresh portion
+// and are skipped here.
+function findLastRepeatableMeal(){
+  let latest = null;
+  for (let i=0;i<4;i++){
+    (state.slots[i]||[]).forEach(item => {
+      if (item.p100 == null) return;
+      if (!latest || new Date(item.loggedAt) > new Date(latest.loggedAt)) latest = item;
+    });
+  }
+  return latest;
+}
+
+// Jumps straight into the portion-confirm step for a given slot + food,
+// skipping search/type-in entirely — used by the empty-slot quick actions
+// (repeat last meal, favourite chips) below.
+function quickLogFood(slotIdx, food){
+  openSheet(slotIdx);
+  pendingFood = food;
+  showStep('stepPortion', 'Confirm portion');
+  document.getElementById('portionFoodName').textContent = food.icon+' '+food.name;
+  const existingNote = state.foodNotes[food.name.toLowerCase()];
+  document.getElementById('portionFoodNote').value = existingNote || '';
+  document.getElementById('portionGrams').value = food.typical;
+  document.getElementById('portionTimeDecision').innerHTML = '';
+  document.getElementById('portionSaveFav').checked = false;
+  updatePortionCalc();
+  buildPulseSelect('pulseSelect', () => buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput'));
+  buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput');
+}
+
+// Builds the "quick log" chips shown on an empty pulse card — a repeat of
+// the last logged meal, plus up to 2 favourites — so a return visit doesn't
+// always require the full search/add-food flow. Returns '' if there's
+// nothing to offer yet (brand-new account, no favourites, nothing logged).
+function buildQuickActionsHtml(slotIdx){
+  const repeat = findLastRepeatableMeal();
+  const favs = state.favourites.slice(0,2);
+  if (!repeat && !favs.length) return '';
+
+  let chips = '';
+  if (repeat){
+    const grams = repeat.grams;
+    const protein = round1((grams/100)*repeat.p100);
+    chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">
+      <span class="quick-icon">↻</span>
+      <span class="quick-name">Repeat: ${repeat.name}</span>
+      <span class="quick-protein">${protein}g</span>
+    </div>`;
+  }
+  favs.forEach(f => {
+    chips += `<div class="quick-chip" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">
+      <span class="quick-icon">⭐</span>
+      <span class="quick-name">${f.name}</span>
+      <span class="quick-protein">${round1((f.typical/100)*f.p100)}g</span>
+    </div>`;
+  });
+
+  return `<div class="quick-actions"><div class="quick-actions-label">Quick log</div>${chips}</div>`;
 }
 
 function closeSheet(){
@@ -2318,6 +2415,18 @@ function closeSettingsSheet(){
 document.getElementById('settingsBtn').onclick = openSettingsSheet;
 document.getElementById('settingsSheetClose').onclick = closeSettingsSheet;
 document.getElementById('settingsSheetBackdrop').onclick = closeSettingsSheet;
+
+function openInfoSheet(){
+  document.getElementById('infoSheetBackdrop').classList.add('open');
+  document.getElementById('infoSheet').classList.add('open');
+}
+function closeInfoSheet(){
+  document.getElementById('infoSheetBackdrop').classList.remove('open');
+  document.getElementById('infoSheet').classList.remove('open');
+}
+document.getElementById('infoBtn').onclick = openInfoSheet;
+document.getElementById('infoSheetClose').onclick = closeInfoSheet;
+document.getElementById('infoSheetBackdrop').onclick = closeInfoSheet;
 document.getElementById('signOutBtn').onclick = async () => {
   await db.auth.signOut();
   window.location.href = 'auth.html';
