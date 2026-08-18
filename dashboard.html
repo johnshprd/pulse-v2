@@ -181,6 +181,11 @@
   .calc-option.active{ border-color:var(--g1); background:rgba(79,70,229,0.08); }
   .calc-option.active span{ color:var(--g1); }
   .btn-confirm{ background:var(--g1); color:#fff; border:none; border-radius:12px; width:100%; padding:14px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.92rem; cursor:pointer; }
+  /* Pins the final "commit this action" button to the bottom of the scrollable
+     sheet so it's never hidden below the fold or under the keyboard — the
+     three multi-field steps (add food, confirm portion, meal scan) all end
+     with a long optional-fields form before the actual save happens. */
+  .btn-confirm.btn-confirm-sticky{ position:sticky; bottom:0; margin-top:14px; box-shadow:0 -10px 14px -6px rgba(0,0,0,0.10); }
   .btn-back{ background:none; border:none; color:var(--muted2); font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; margin-bottom:12px; padding:0; }
 
   .method-btn{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1.5px solid var(--border2); border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
@@ -513,7 +518,7 @@
         </div>
       </div>
       <div id="addFoodError" style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:#e5484d; margin-bottom:8px; display:none;"></div>
-      <button class="btn-confirm" id="saveAddFoodBtn">Save to my food database →</button>
+      <button class="btn-confirm btn-confirm-sticky" id="saveAddFoodBtn">Next: log this food →</button>
     </div>
 
     <div class="portion-step" id="stepTypeIn">
@@ -575,7 +580,7 @@
         <input type="checkbox" id="portionSaveFav" style="width:16px; height:16px; accent-color:var(--g1);"> ⭐ Save as favourite for quick logging later
       </label>
       <div class="pulse-select" id="pulseSelect"></div>
-      <button class="btn-confirm" id="confirmLogBtn">Confirm &amp; log →</button>
+      <button class="btn-confirm btn-confirm-sticky" id="confirmLogBtn">Confirm &amp; log →</button>
     </div>
 
     <div class="portion-step" id="stepMealScan">
@@ -603,7 +608,7 @@
         <span style="font-family:'Space Mono',monospace; font-size:0.68rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase;">Total protein</span>
         <span id="scanTotalProtein" style="font-family:'Bebas Neue',sans-serif; font-size:1.4rem; color:var(--g1);">0g</span>
       </div>
-      <button class="btn-confirm" id="confirmScanBtn">Confirm &amp; log meal →</button>
+      <button class="btn-confirm btn-confirm-sticky" id="confirmScanBtn">Confirm &amp; log meal →</button>
     </div>
 
   </div>
@@ -1559,7 +1564,7 @@ function openAddFood(){
   addFoodIcon = '🍽️';
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
-  document.getElementById('saveAddFoodBtn').textContent = 'Save food →';
+  document.getElementById('saveAddFoodBtn').textContent = 'Next: log this food →';
   showStep('stepAddFood', 'Add a food');
 }
 
