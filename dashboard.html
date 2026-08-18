@@ -608,6 +608,20 @@
       <button class="btn-confirm btn-confirm-sticky" id="confirmLogBtn">Confirm &amp; log →</button>
     </div>
 
+    <div class="portion-step" id="stepPhotoChoice">
+      <button class="btn-back" id="backToMethodFromPhotoChoice">← Back</button>
+      <div class="method-btn" id="btnTakePhoto">
+        <div class="method-icon">📷</div>
+        <div class="method-text"><h4>Take a photo</h4><p>Point your camera at your plate</p></div>
+        <div class="method-chevron">›</div>
+      </div>
+      <div class="method-btn" id="btnChoosePhoto">
+        <div class="method-icon alt">🖼️</div>
+        <div class="method-text"><h4>Choose from gallery</h4><p>Use a photo you've already got</p></div>
+        <div class="method-chevron">›</div>
+      </div>
+    </div>
+
     <div class="portion-step" id="stepMealScan">
       <button class="btn-back" id="backToMethodFromScan">← Back</button>
       <div style="position:relative; margin:0 0 14px; border-radius:12px; overflow:hidden;">
@@ -639,6 +653,7 @@
   </div>
 </div>
 
+<input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
 <input type="file" id="galleryInput" accept="image/*" style="display:none;">
 
 <script src="js/config.js"></script>
@@ -1455,7 +1470,7 @@ document.getElementById('deleteEditItemBtn').onclick = deleteEditItem;
 // --- Add meal sheet ---
 let expandedSlot = null;
 
-const ALL_STEPS = ['stepMethod','stepFavourites','stepSearch','stepTypeIn','stepAddFood','stepPortion','stepMealScan'];
+const ALL_STEPS = ['stepMethod','stepFavourites','stepSearch','stepTypeIn','stepAddFood','stepPortion','stepPhotoChoice','stepMealScan'];
 
 function showStep(stepId, title){
   ALL_STEPS.forEach(id => document.getElementById(id).classList.toggle('active', id===stepId));
@@ -2486,7 +2501,10 @@ document.getElementById('fabBtn').onclick = () => openSheet(activeSlotIndex());
 document.getElementById('sheetClose').onclick = closeSheet;
 document.getElementById('sheetBackdrop').onclick = closeSheet;
 
-document.getElementById('btnScanPhoto').onclick = () => startScan(document.getElementById('galleryInput'));
+document.getElementById('btnScanPhoto').onclick = () => showStep('stepPhotoChoice', 'Photo');
+document.getElementById('btnTakePhoto').onclick = () => startScan(document.getElementById('cameraInput'));
+document.getElementById('btnChoosePhoto').onclick = () => startScan(document.getElementById('galleryInput'));
+document.getElementById('backToMethodFromPhotoChoice').onclick = () => showStep('stepMethod', 'Add meal');
 document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
