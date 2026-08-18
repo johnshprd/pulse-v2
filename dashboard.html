@@ -457,14 +457,19 @@
   <div class="sheet-body">
 
     <div class="portion-step active" id="stepMethod">
-      <div class="method-btn" id="btnFavourites">
+      <div class="method-btn" id="btnFavourites" style="display:none;">
         <div class="method-icon alt" style="background:#eab308;">⭐</div>
         <div class="method-text"><h4>Favourites</h4><p>Your saved foods, one tap to log</p></div>
         <div class="method-chevron">›</div>
       </div>
-      <div class="method-btn" id="btnSearchDb">
+      <div class="method-btn primary" id="btnSearchDb">
         <div class="method-icon alt">🔍</div>
         <div class="method-text"><h4>Search food database</h4><p>Find packaged foods &amp; common meals</p></div>
+        <div class="method-chevron">›</div>
+      </div>
+      <div class="method-btn" id="btnScanPhoto">
+        <div class="method-icon">📷</div>
+        <div class="method-text"><h4>Photo</h4><p>Take a new photo or choose one you've got</p></div>
         <div class="method-chevron">›</div>
       </div>
       <div class="method-btn" id="btnTypeIn">
@@ -475,16 +480,6 @@
       <div class="method-btn" id="btnAddFoodTile">
         <div class="method-icon alt">➕</div>
         <div class="method-text"><h4>Add a custom food</h4><p>Save it to your database, with a protein ratio, for next time</p></div>
-        <div class="method-chevron">›</div>
-      </div>
-      <div class="method-btn primary" id="btnScanPhoto">
-        <div class="method-icon">📷</div>
-        <div class="method-text"><h4>Scan meal photo</h4><p>Point at your plate, we'll detect items</p></div>
-        <div class="method-chevron">›</div>
-      </div>
-      <div class="method-btn" id="btnGallery">
-        <div class="method-icon alt">🖼️</div>
-        <div class="method-text"><h4>Choose from gallery</h4><p>Use a photo you already took</p></div>
         <div class="method-chevron">›</div>
       </div>
     </div>
@@ -644,7 +639,6 @@
   </div>
 </div>
 
-<input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
 <input type="file" id="galleryInput" accept="image/*" style="display:none;">
 
 <script src="js/config.js"></script>
@@ -1472,6 +1466,7 @@ function openSheet(slotIdx){
   pendingSlot = slotIdx;
   document.getElementById('sheetBackdrop').classList.add('open');
   document.getElementById('sheet').classList.add('open');
+  document.getElementById('btnFavourites').style.display = state.favourites.length ? 'flex' : 'none';
   showStep('stepMethod', 'Add meal');
 }
 
@@ -2491,9 +2486,8 @@ document.getElementById('fabBtn').onclick = () => openSheet(activeSlotIndex());
 document.getElementById('sheetClose').onclick = closeSheet;
 document.getElementById('sheetBackdrop').onclick = closeSheet;
 
-document.getElementById('btnScanPhoto').onclick = () => startScan(document.getElementById('cameraInput'));
+document.getElementById('btnScanPhoto').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnAddFoodTile').onclick = openAddFood;
-document.getElementById('btnGallery').onclick = () => startScan(document.getElementById('galleryInput'));
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
 document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; document.getElementById('estimateTypeInNote').style.display='none'; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
