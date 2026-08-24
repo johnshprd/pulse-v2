@@ -193,11 +193,13 @@
   .quick-actions{ margin-top:14px; }
   .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
   .quick-pills{ display:flex; flex-wrap:wrap; gap:8px; }
-  .quick-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--surface); border:1.5px solid var(--g1); border-radius:999px; padding:7px 13px; cursor:pointer; }
+  .quick-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--surface); border:1.5px solid var(--g1); border-radius:999px; padding:7px 10px 7px 13px; cursor:pointer; }
   .quick-pill:active{ background:var(--g1); }
   .quick-pill:active .quick-pill-text, .quick-pill:active .quick-icon{ color:#fff !important; }
   .quick-pill .quick-icon{ font-size:0.9rem; flex-shrink:0; }
   .quick-pill .quick-pill-text{ font-family:'DM Sans',sans-serif; font-size:0.78rem; font-weight:600; color:var(--g1); white-space:nowrap; }
+  .quick-pill .quick-pill-delete{ font-size:0.7rem; color:var(--muted); flex-shrink:0; padding:4px 2px 4px 6px; margin-left:1px; }
+  .quick-pill .quick-pill-delete:active{ color:#e5484d; }
 
   .method-btn{ display:flex; align-items:center; gap:14px; background:var(--surface); border:1.5px solid var(--border2); border-radius:14px; padding:16px; margin-bottom:12px; cursor:pointer; }
   .method-btn.primary{ border-color:var(--g1); background:rgba(79,70,229,0.06); }
@@ -1524,30 +1526,46 @@ function quickLogFood(slotIdx, food){
 // the last logged meal, plus up to 2 favourites — so a return visit doesn't
 // always require the full search/add-food flow. Returns '' if there's
 // nothing to offer yet (brand-new account, no favourites, nothing logged).
+let dismissedRepeatKey = null; // repeat suggestion the user × 'd this session — not persisted, just hides it until the next new log
+
 function buildQuickActionsHtml(slotIdx){
   const repeat = findLastRepeatableMeal();
+  const repeatKey = repeat ? repeat.name+'|'+repeat.loggedAt : null;
+  const showRepeat = repeat && repeatKey !== dismissedRepeatKey;
   const favs = state.favourites.slice(0,2);
-  if (!repeat && !favs.length) return '';
+  if (!showRepeat && !favs.length) return '';
 
   const shortName = (n, max=18) => n.length > max ? n.slice(0,max-1)+'…' : n;
 
   let pills = '';
-  if (repeat){
+  if (showRepeat){
     const grams = repeat.grams;
     const protein = round1((grams/100)*repeat.p100);
-    pills += `<div class="quick-pill" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">
-      <span class="quick-icon">↻</span>
-      <span class="quick-pill-text">${shortName(repeat.name)} · ~${protein}g</span>
+    pills += `<div class="quick-pill">
+      <span class="quick-icon" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">↻</span>
+      <span class="quick-pill-text" onclick="quickLogFood(${slotIdx}, {name:'${repeat.name.replace(/'/g,"\\'")}', icon:'${repeat.icon||'🍽️'}', p100:${repeat.p100}, typical:${grams}})">${shortName(repeat.name)} · ~${protein}g</span>
+      <span class="quick-pill-delete" onclick="event.stopPropagation(); dismissRepeatPill('${repeatKey.replace(/'/g,"\\'")}')">✕</span>
     </div>`;
   }
   favs.forEach(f => {
-    pills += `<div class="quick-pill" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">
-      <span class="quick-icon">${f.icon}</span>
-      <span class="quick-pill-text">${shortName(f.name)} · ~${round1((f.typical/100)*f.p100)}g</span>
+    pills += `<div class="quick-pill">
+      <span class="quick-icon" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">${f.icon}</span>
+      <span class="quick-pill-text" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">${shortName(f.name)} · ~${round1((f.typical/100)*f.p100)}g</span>
+      <span class="quick-pill-delete" onclick="event.stopPropagation(); deleteFavouriteFromQuickLog('${f.id}')">✕</span>
     </div>`;
   });
 
   return `<div class="quick-actions"><div class="quick-actions-label">⚡ Quick log</div><div class="quick-pills">${pills}</div></div>`;
+}
+
+function dismissRepeatPill(key){
+  dismissedRepeatKey = key;
+  render();
+}
+
+function deleteFavouriteFromQuickLog(id){
+  deleteFavourite(id); // existing function — also re-renders the Favourites step list
+  render(); // refresh the main dashboard so the pill disappears from Quick Log too
 }
 
 function closeSheet(){
