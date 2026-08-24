@@ -1527,12 +1527,13 @@ function quickLogFood(slotIdx, food){
 // always require the full search/add-food flow. Returns '' if there's
 // nothing to offer yet (brand-new account, no favourites, nothing logged).
 let dismissedRepeatKey = null; // repeat suggestion the user × 'd this session — not persisted, just hides it until the next new log
+let dismissedFavouriteIds = []; // favourite pills × 'd from Quick Log this session — the favourite itself is untouched
 
 function buildQuickActionsHtml(slotIdx){
   const repeat = findLastRepeatableMeal();
   const repeatKey = repeat ? repeat.name+'|'+repeat.loggedAt : null;
   const showRepeat = repeat && repeatKey !== dismissedRepeatKey;
-  const favs = state.favourites.slice(0,2);
+  const favs = state.favourites.filter(f => !dismissedFavouriteIds.includes(f.id)).slice(0,2);
   if (!showRepeat && !favs.length) return '';
 
   const shortName = (n, max=18) => n.length > max ? n.slice(0,max-1)+'…' : n;
@@ -1551,7 +1552,7 @@ function buildQuickActionsHtml(slotIdx){
     pills += `<div class="quick-pill">
       <span class="quick-icon" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">${f.icon}</span>
       <span class="quick-pill-text" onclick="quickLogFood(${slotIdx}, {name:'${f.name.replace(/'/g,"\\'")}', icon:'${f.icon}', p100:${f.p100}, typical:${f.typical}})">${shortName(f.name)} · ~${round1((f.typical/100)*f.p100)}g</span>
-      <span class="quick-pill-delete" onclick="event.stopPropagation(); deleteFavouriteFromQuickLog('${f.id}')">✕</span>
+      <span class="quick-pill-delete" onclick="event.stopPropagation(); dismissFavouritePill('${f.id}')">✕</span>
     </div>`;
   });
 
@@ -1563,9 +1564,9 @@ function dismissRepeatPill(key){
   render();
 }
 
-function deleteFavouriteFromQuickLog(id){
-  deleteFavourite(id); // existing function — also re-renders the Favourites step list
-  render(); // refresh the main dashboard so the pill disappears from Quick Log too
+function dismissFavouritePill(id){
+  dismissedFavouriteIds.push(id);
+  render();
 }
 
 function closeSheet(){
