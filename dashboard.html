@@ -823,8 +823,17 @@ function slotTotal(i){
 
 // Ported directly from the live app's getMpsState — each pulse's window opens
 // on its first logged meal and stays "active" for 3 hours after the latest entry.
-function getMpsState(entries){
-  if (!entries.length) return { status:'idle', pct:0, label:'Not started yet' };
+function getMpsState(entries, slotIdx){
+  if (!entries.length){
+    // Same boundaries activeSlotIndex() uses to suggest "today's" pulse —
+    // once the clock passes a pulse's typical hour and nothing was logged,
+    // call it missed rather than the more hopeful "not started yet".
+    const missAfterHour = [11, 16, 20, 24];
+    if (slotIdx != null && currentHour() >= missAfterHour[slotIdx]){
+      return { status:'idle', pct:0, label:'Pulse window missed' };
+    }
+    return { status:'idle', pct:0, label:'Not started yet' };
+  }
   const latest = Math.max(...entries.map(e => new Date(e.loggedAt).getTime()));
   const elapsed = Date.now() - latest;
   const pct = Math.max(0, Math.min(100, (elapsed/MPS_DURATION_MS)*100));
@@ -845,7 +854,7 @@ function getPulseStates(){
     const target = state.slotTargets[i];
     const met = total > 0 && total >= target;
     if (!entries.length) return { idx:i, name:SLOT_NAMES[i], state:'empty', total, target, remaining:target, logged:false };
-    const mps = getMpsState(entries).status; // idle|active|ending|ended
+    const mps = getMpsState(entries, i).status; // idle|active|ending|ended
     const windowOpen = mps !== 'ended';
     if (met) return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active-met':'closed-met', total, target, remaining:0, logged:true };
     return { idx:i, name:SLOT_NAMES[i], state: windowOpen?'active':'closed-short', total, target, remaining: round1(target-total), logged:true };
@@ -941,7 +950,7 @@ function updateCoach(){
 
 // Real MPS countdown label for a pulse — no fixed clock times, matches the live app.
 function pulseWindowLabel(i){
-  return getMpsState(state.slots[i] || []).label;
+  return getMpsState(state.slots[i] || [], i).label;
 }
 
 // Small circular countdown ring showing time remaining in the MPS window.
@@ -963,7 +972,7 @@ function ringSVG(pct, size, colorOverride){
 // Ring + colour for a pulse's current MPS state, for use in both the
 // expanded card and the collapsed rows.
 function pulseRing(i, size){
-  const mps = getMpsState(state.slots[i] || []);
+  const mps = getMpsState(state.slots[i] || [], i);
   if (mps.status === 'idle') return `<div style="width:${size}px; height:${size}px; border-radius:50%; border:2px solid var(--border2); flex-shrink:0;"></div>`;
   if (mps.status === 'ended'){
     const st = getPulseStates()[i].state;
@@ -1176,7 +1185,7 @@ function render(){
     const pct = target>0 ? Math.min(100,(total/target)*100) : 0;
     const seg = document.createElement('div');
     seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'') + (pct>=45?' has-fill':'');
-    const mpsStatus = getMpsState(state.slots[i]||[]).status;
+    const mpsStatus = getMpsState(state.slots[i]||[], i).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     seg.innerHTML = `
       <div class="seg-fill" style="height:${pct}%;">
@@ -1965,7 +1974,7 @@ function findOverlappingSlot(excludeIdx){
     if (i===excludeIdx) continue;
     const entries = state.slots[i] || [];
     if (!entries.length) continue;
-    const mps = getMpsState(entries);
+    const mps = getMpsState(entries, i);
     if (mps.status==='active' || mps.status==='ending') return { idx:i, label:mps.label };
   }
   return null;
