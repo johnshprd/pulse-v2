@@ -190,9 +190,8 @@
 
   /* Quick-action chips on an empty pulse — repeat last meal / favourites,
      so logging doesn't always require opening the full search sheet. */
-  .quick-actions{ margin-top:14px; background:var(--surface2); border-radius:14px; padding:12px 14px; }
-  .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:2px; }
-  .quick-actions-sub{ font-family:'DM Sans',sans-serif; font-size:0.7rem; color:var(--muted); margin-bottom:10px; }
+  .quick-actions{ margin-top:14px; }
+  .quick-actions-label{ font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
   .quick-pills{ display:flex; flex-wrap:wrap; gap:8px; }
   .quick-pill{ display:inline-flex; align-items:center; gap:5px; background:var(--surface); border:1.5px solid var(--g1); border-radius:999px; padding:7px 13px; cursor:pointer; }
   .quick-pill:active{ background:var(--g1); }
@@ -1548,7 +1547,7 @@ function buildQuickActionsHtml(slotIdx){
     </div>`;
   });
 
-  return `<div class="quick-actions"><div class="quick-actions-label">⚡ Quick log</div><div class="quick-actions-sub">Tap to log instantly — nothing here is saved yet</div><div class="quick-pills">${pills}</div></div>`;
+  return `<div class="quick-actions"><div class="quick-actions-label">⚡ Quick log</div><div class="quick-pills">${pills}</div></div>`;
 }
 
 function closeSheet(){
