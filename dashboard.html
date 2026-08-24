@@ -823,7 +823,7 @@ function slotTotal(i){
 // Ported directly from the live app's getMpsState — each pulse's window opens
 // on its first logged meal and stays "active" for 3 hours after the latest entry.
 function getMpsState(entries){
-  if (!entries.length) return { status:'idle', pct:0, label:'Tap + ADD below to log your first meal and start your MPS window' };
+  if (!entries.length) return { status:'idle', pct:0, label:'Not started yet' };
   const latest = Math.max(...entries.map(e => new Date(e.loggedAt).getTime()));
   const elapsed = Date.now() - latest;
   const pct = Math.max(0, Math.min(100, (elapsed/MPS_DURATION_MS)*100));
