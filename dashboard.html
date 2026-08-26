@@ -919,7 +919,10 @@ function updateCoach(){
       msg = '🏆 <strong>Daily goal reached!</strong> Outstanding — you\'ve given your muscles the best chance to grow today.';
     }
     else if (overCeiling>0){
-      msg = '⚠️ <strong>One pulse is over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — try spreading that protein across two pulses next time.';
+      const suggestion = state.pulseCount < 4
+        ? 'try switching to 4 pulses a day in Settings, so each one carries less'
+        : 'try spreading that protein across two pulses next time';
+      msg = '⚠️ <strong>One pulse is over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — '+suggestion+'.';
     }
     else if (nothingLogged){
       const ico = hour<12?'🌅':hour<17?'⏰':'🌙';
