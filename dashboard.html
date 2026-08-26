@@ -696,6 +696,7 @@ let currentUser = null;
 let state = {
   goal: 150,
   slotTargets: [38,38,37,37],
+  bodyWeightKg: null,
   slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
   favourites: [],
@@ -878,7 +879,12 @@ function updateCoach(){
     const goal = state.goal || 150;
     const hour = new Date().getHours();
     const pulses = getPulseStates();
-    const overCeiling = pulses.filter(p=>p.total>55).length;
+    // Per-meal ceiling for max MPS stimulation is commonly cited as
+    // 0.4-0.55g of protein per kg body weight (Schoenfeld & Aragon 2018).
+    // Falls back to the population-average 40-55g when weight isn't known.
+    const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.55) : 55;
+    const ceilingLow = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.4) : 40;
+    const overCeiling = pulses.filter(p=>p.total>ceiling).length;
 
     let mostRecentTs=-1, inProgress=null;
     state.slots.forEach((entries,i)=>{
@@ -906,7 +912,7 @@ function updateCoach(){
       msg = '🏆 <strong>Daily goal reached!</strong> Outstanding — you\'ve given your muscles the best chance to grow today.';
     }
     else if (overCeiling>0){
-      msg = '⚠️ <strong>One pulse is over 55g.</strong> Your muscles can only absorb ~40–55g per meal — try spreading that protein across two pulses next time.';
+      msg = '⚠️ <strong>One pulse is over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — try spreading that protein across two pulses next time.';
     }
     else if (nothingLogged){
       const ico = hour<12?'🌅':hour<17?'⏰':'🌙';
@@ -1027,6 +1033,7 @@ async function init(){
   const isNewUser = !data; // no user_data row yet — first ever launch for this account
   if (data){
     state.goal = data.goal || 150;
+    state.bodyWeightKg = data.body_weight_kg || null;
     // Re-split if the saved targets are missing, or were saved under a
     // different pulse count (e.g. testers who logged in before the 4→3
     // pulse change) — stops them being stuck with a stale per-pulse target.
@@ -1147,7 +1154,7 @@ function checkMidnight(){
 async function saveUserData(){
   const today = localDateString();
   const { error } = await db.from('user_data').upsert({
-    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets,
+    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
@@ -2426,6 +2433,7 @@ function openGoalSheet(){
   document.getElementById('goalInput').value = state.goal;
   document.getElementById('goalError').textContent = '';
   document.getElementById('goalCalculator').style.display = 'none';
+  if (state.bodyWeightKg) document.getElementById('calcWeight').value = state.bodyWeightKg;
   document.getElementById('goalSheetBackdrop').classList.add('open');
   document.getElementById('goalSheet').classList.add('open');
 }
@@ -2465,6 +2473,7 @@ function updateCalcResult(){
     return;
   }
   const kg = calcUnit === 'lbs' ? raw * 0.4536 : raw;
+  state.bodyWeightKg = round1(kg); // kept so the per-pulse ceiling can scale to the person, not just used once here
   let suggested = Math.round(kg * calcMult);
   suggested = Math.max(40, Math.min(400, suggested));
   document.getElementById('calcResultVal').style.fontSize = '2.2rem';
