@@ -521,6 +521,11 @@
           <div class="field-input"><input type="number" id="addFoodTypical" inputmode="decimal" value="100"><span class="unit">g</span></div>
         </div>
       </div>
+      <div class="field" style="margin-top:2px;">
+        <label class="field-label">Protein for this portion</label>
+        <div class="field-input"><input type="number" id="addFoodPerPortion" inputmode="decimal" placeholder="0"><span class="unit">g</span></div>
+        <div style="font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--muted); margin-top:3px;">Linked to the two fields above — edit any one and the others update.</div>
+      </div>
       <div style="font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted); margin:2px 0 12px;">Optional — carbs, fat and calories, shown for information only</div>
       <div class="row2">
         <div class="field">
@@ -1681,6 +1686,26 @@ document.getElementById('addFoodIconBtn').onclick = () => {
   }
 };
 
+// Keeps Protein/100g, Typical portion, and Protein-for-this-portion in sync
+// as any one of the three is edited. p100 is treated as the food's fixed
+// intrinsic ratio when the portion-size field changes; editing the
+// per-portion field instead solves back for p100, holding the portion size
+// steady — matches how someone would naturally think about "this 30g scoop
+// has 27g protein" rather than the underlying ratio.
+function syncPerPortionFromRatio(){
+  const p100 = parseFloat(document.getElementById('addFoodProtein').value) || 0;
+  const typical = parseFloat(document.getElementById('addFoodTypical').value) || 0;
+  document.getElementById('addFoodPerPortion').value = typical > 0 ? round1((p100/100)*typical) : '';
+}
+function syncRatioFromPerPortion(){
+  const perPortion = parseFloat(document.getElementById('addFoodPerPortion').value) || 0;
+  const typical = parseFloat(document.getElementById('addFoodTypical').value) || 0;
+  if (typical > 0) document.getElementById('addFoodProtein').value = round1((perPortion/typical)*100);
+}
+document.getElementById('addFoodProtein').addEventListener('input', syncPerPortionFromRatio);
+document.getElementById('addFoodTypical').addEventListener('input', syncPerPortionFromRatio);
+document.getElementById('addFoodPerPortion').addEventListener('input', syncRatioFromPerPortion);
+
 function openAddFood(){
   editingFoodId = null;
   editingFoodKind = null;
@@ -1699,6 +1724,7 @@ function openAddFood(){
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
   document.getElementById('saveAddFoodBtn').textContent = 'Next: log this food →';
+  syncPerPortionFromRatio();
   showStep('stepAddFood', 'Add a food');
 }
 
@@ -1723,6 +1749,7 @@ function openEditFood(id){
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
   document.getElementById('saveAddFoodBtn').textContent = 'Save changes →';
+  syncPerPortionFromRatio();
   showStep('stepAddFood', 'Edit food');
 }
 
@@ -1747,6 +1774,7 @@ function openEditFavourite(id){
   document.getElementById('addFoodIconBtn').textContent = addFoodIcon;
   document.getElementById('addFoodIconPicker').style.display = 'none';
   document.getElementById('saveAddFoodBtn').textContent = 'Save changes →';
+  syncPerPortionFromRatio();
   showStep('stepAddFood', 'Edit favourite');
 }
 
@@ -1859,6 +1887,7 @@ async function estimateFoodWithAI(){
     if (e.c100 != null) document.getElementById('addFoodCarbs').value = round1(e.c100);
     if (e.f100 != null) document.getElementById('addFoodFat').value = round1(e.f100);
     if (e.kcal100 != null) document.getElementById('addFoodKcal').value = Math.round(e.kcal100);
+    syncPerPortionFromRatio();
 
     noteEl.style.display = 'block';
     noteEl.style.color = 'var(--muted2)';
