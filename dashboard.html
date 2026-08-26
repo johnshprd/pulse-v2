@@ -1027,7 +1027,13 @@ async function init(){
   const isNewUser = !data; // no user_data row yet — first ever launch for this account
   if (data){
     state.goal = data.goal || 150;
-    state.slotTargets = data.slot_targets || distributeGoal(state.goal);
+    // Re-split if the saved targets are missing, or were saved under a
+    // different pulse count (e.g. testers who logged in before the 4→3
+    // pulse change) — stops them being stuck with a stale per-pulse target.
+    const savedTargets = data.slot_targets;
+    const targetsStale = !savedTargets || savedTargets.length !== PULSE_COUNT;
+    let targetsStaleOrSlotsMigrated = false;
+    state.slotTargets = targetsStale ? distributeGoal(state.goal) : savedTargets;
     state.customFoods = data.custom_foods || [];
     state.favourites = data.favourites || [];
     state.foodNotes = data.food_notes || {};
@@ -1036,7 +1042,19 @@ async function init(){
     const storedDate = data.log_date ? String(data.log_date).slice(0,10) : null;
     if (storedDate === today){
       // Same day — carry on with whatever's logged so far
-      state.slots = data.slots || Array.from({length:PULSE_COUNT}, () => []);
+      let loadedSlots = data.slots || Array.from({length:PULSE_COUNT}, () => []);
+      if (loadedSlots.length > PULSE_COUNT){
+        // Saved today under an older, larger pulse count (e.g. before the
+        // 4→3 pulse change) — fold any entries from the now-removed slots
+        // into the new last pulse rather than losing them or leaving them
+        // silently counted in the total but invisible in any card.
+        const overflow = loadedSlots.slice(PULSE_COUNT).flat();
+        loadedSlots = loadedSlots.slice(0, PULSE_COUNT);
+        loadedSlots[PULSE_COUNT-1] = [...loadedSlots[PULSE_COUNT-1], ...overflow];
+        targetsStaleOrSlotsMigrated = true;
+      }
+      state.slots = loadedSlots;
+      if (targetsStale || targetsStaleOrSlotsMigrated) await saveUserData(); // persist the correction
     } else {
       // Day has rolled over — bank yesterday's total into history, clear today's slots
       state.weekHistory.shift();
