@@ -937,7 +937,7 @@ function updateCoach(){
     }
     else if (lastPulseDone){
       if (missed.length){
-        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?'Last pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
+        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?lastPulse.name+' pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
       } else {
         msg = '🌙 <strong>That\'s a wrap for today!</strong> <strong>'+total+'g</strong> logged across the day. Solid work — rest well and reset tomorrow.';
       }
