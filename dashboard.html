@@ -431,6 +431,11 @@
   <div class="sheet-body">
     <div style="font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Signed in as</div>
     <div style="font-family:'DM Sans',sans-serif; font-size:0.9rem; color:var(--text); margin-bottom:22px; word-break:break-all;" id="settingsEmail">—</div>
+
+    <div style="font-family:'Space Mono',monospace; font-size:0.66rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:4px;">Pulses per day</div>
+    <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-bottom:10px; line-height:1.4;">3 fits most people's routine. If your goal is high enough that 3 pulses would each need to exceed what one sitting can use, 4 spreads it further.</div>
+    <div class="pulse-select" id="pulseCountSelect" style="margin-bottom:22px;"></div>
+
     <button class="onboarding-btn" id="signOutBtn" style="background:var(--surface2); color:var(--text); border:1.5px solid var(--border2);">Sign out</button>
   </div>
 </div>
@@ -667,8 +672,9 @@
 <script src="js/config.js"></script>
 <script src="js/foods.js"></script>
 <script>
-const SLOT_NAMES = ['Breakfast','Lunch','Dinner'];
-const PULSE_COUNT = SLOT_NAMES.length;
+const ALL_SLOT_NAMES = ['Breakfast','Lunch','Dinner','Evening'];
+let SLOT_NAMES = ALL_SLOT_NAMES.slice(0, 3); // default until the saved pulse_count loads
+let PULSE_COUNT = SLOT_NAMES.length;
 const SLOT_ICONS = ['🌅','☀️','🌙','🌛'];
 // Real-world clock windows each pulse is meant to represent — used to stop
 // logging "now" (or a backdated time) into a pulse whose actual window
@@ -697,6 +703,7 @@ let state = {
   goal: 150,
   slotTargets: [38,38,37,37],
   bodyWeightKg: null,
+  pulseCount: 3,
   slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
   favourites: [],
@@ -1034,6 +1041,9 @@ async function init(){
   if (data){
     state.goal = data.goal || 150;
     state.bodyWeightKg = data.body_weight_kg || null;
+    state.pulseCount = data.pulse_count || 3;
+    SLOT_NAMES = ALL_SLOT_NAMES.slice(0, state.pulseCount);
+    PULSE_COUNT = SLOT_NAMES.length;
     // Re-split if the saved targets are missing, or were saved under a
     // different pulse count (e.g. testers who logged in before the 4→3
     // pulse change) — stops them being stuck with a stale per-pulse target.
@@ -1051,13 +1061,19 @@ async function init(){
       // Same day — carry on with whatever's logged so far
       let loadedSlots = data.slots || Array.from({length:PULSE_COUNT}, () => []);
       if (loadedSlots.length > PULSE_COUNT){
-        // Saved today under an older, larger pulse count (e.g. before the
-        // 4→3 pulse change) — fold any entries from the now-removed slots
-        // into the new last pulse rather than losing them or leaving them
-        // silently counted in the total but invisible in any card.
+        // Saved today under a larger pulse count than currently set (e.g.
+        // switched 4→3, or the earlier global 4→3 default change) — fold
+        // any entries from the now-removed slots into the new last pulse
+        // rather than losing them or leaving them silently counted in the
+        // total but invisible in any card.
         const overflow = loadedSlots.slice(PULSE_COUNT).flat();
         loadedSlots = loadedSlots.slice(0, PULSE_COUNT);
         loadedSlots[PULSE_COUNT-1] = [...loadedSlots[PULSE_COUNT-1], ...overflow];
+        targetsStaleOrSlotsMigrated = true;
+      } else if (loadedSlots.length < PULSE_COUNT){
+        // Saved today under a smaller pulse count (e.g. just switched 3→4) —
+        // pad with empty new pulses rather than leaving them undefined.
+        loadedSlots = [...loadedSlots, ...Array.from({length:PULSE_COUNT-loadedSlots.length}, () => [])];
         targetsStaleOrSlotsMigrated = true;
       }
       state.slots = loadedSlots;
@@ -1154,7 +1170,7 @@ function checkMidnight(){
 async function saveUserData(){
   const today = localDateString();
   const { error } = await db.from('user_data').upsert({
-    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null,
+    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
@@ -2547,8 +2563,44 @@ document.getElementById('goalSheetBackdrop').onclick = closeGoalSheet;
 document.getElementById('confirmGoalBtn').onclick = saveGoal;
 
 // --- Settings / sign out ---
+function renderPulseCountSelect(){
+  const el = document.getElementById('pulseCountSelect');
+  el.innerHTML = '';
+  [3,4].forEach(n => {
+    const chip = document.createElement('div');
+    chip.className = 'pulse-chip' + (n===state.pulseCount ? ' active' : '');
+    chip.textContent = n+' pulses';
+    chip.onclick = () => changePulseCount(n);
+    el.appendChild(chip);
+  });
+}
+
+// Changing this mid-day is a real structural change — resplits the goal,
+// and resizes today's slots array (folding entries from a removed pulse
+// into the new last one; padding with an empty pulse if growing) using the
+// exact same logic that handles a tester's saved data not matching their
+// current setting on load.
+async function changePulseCount(n){
+  if (n === state.pulseCount) return;
+  state.pulseCount = n;
+  SLOT_NAMES = ALL_SLOT_NAMES.slice(0, n);
+  PULSE_COUNT = SLOT_NAMES.length;
+  state.slotTargets = distributeGoal(state.goal);
+  if (state.slots.length > PULSE_COUNT){
+    const overflow = state.slots.slice(PULSE_COUNT).flat();
+    state.slots = state.slots.slice(0, PULSE_COUNT);
+    state.slots[PULSE_COUNT-1] = [...state.slots[PULSE_COUNT-1], ...overflow];
+  } else if (state.slots.length < PULSE_COUNT){
+    state.slots = [...state.slots, ...Array.from({length:PULSE_COUNT-state.slots.length}, () => [])];
+  }
+  await saveUserData();
+  renderPulseCountSelect();
+  render();
+}
+
 function openSettingsSheet(){
   document.getElementById('settingsEmail').textContent = currentUser ? currentUser.email : '—';
+  renderPulseCountSelect();
   document.getElementById('settingsSheetBackdrop').classList.add('open');
   document.getElementById('settingsSheet').classList.add('open');
 }
