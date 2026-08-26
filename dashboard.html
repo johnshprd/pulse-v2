@@ -239,7 +239,7 @@
     <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-emoji">⏱️</div>
       <div class="onboarding-title">Four pulses a day</div>
-      <div class="onboarding-body">Your daily goal is split across 4 windows — breakfast, lunch, dinner and evening. Log a meal and a 3-hour MPS window opens for that pulse.</div>
+      <div class="onboarding-body">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse.</div>
       <div class="onboarding-pulses-demo">
         <span class="lit">P1</span><span>P2</span><span>P3</span><span>P4</span>
       </div>
@@ -248,7 +248,7 @@
     <div class="onboarding-panel" data-panel="2">
       <div class="onboarding-emoji">🎯</div>
       <div class="onboarding-title">Set your daily goal</div>
-      <div class="onboarding-body">We'll split this evenly across your 4 pulses. You can change it any time from the GOAL button.</div>
+      <div class="onboarding-body">We'll split this evenly across your 3 pulses. You can change it any time from the GOAL button.</div>
       <div class="onboarding-goal-hint">BETWEEN 40G AND 400G</div>
       <div class="onboarding-goal-field">
         <input type="number" id="onboardingGoalInput" inputmode="decimal" value="150">
@@ -382,7 +382,7 @@
   </div>
   <div class="sheet-body">
     <div style="font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; line-height:1.4;">
-      This is split evenly across your 4 pulses. Between 40g and 400g.
+      This is split evenly across your 3 pulses. Between 40g and 400g.
     </div>
     <div class="portion-field" style="margin:0 0 6px;">
       <input type="number" id="goalInput" inputmode="decimal">
@@ -444,8 +444,8 @@
   </div>
   <div class="sheet-body">
     <div class="onboarding-body" style="margin-bottom:20px;">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
-    <div class="onboarding-body" style="margin-bottom:20px;">Your daily goal is split across 4 windows — breakfast, lunch, dinner and evening. Log a meal and a 3-hour MPS window opens for that pulse — that's the stretch of time your body is actively building muscle off that meal.</div>
-    <div class="onboarding-body" style="margin-bottom:20px;">Hitting your protein target inside each window (not just somewhere across the day) is what the 4 pulses are for. Missing a window doesn't undo your progress — it just means that particular pulse didn't hit its target.</div>
+    <div class="onboarding-body" style="margin-bottom:20px;">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse — that's the stretch of time your body is actively building muscle off that meal.</div>
+    <div class="onboarding-body" style="margin-bottom:20px;">Hitting your protein target inside each window (not just somewhere across the day) is what the 3 pulses are for. Missing a window doesn't undo your progress — it just means that particular pulse didn't hit its target.</div>
     <div class="onboarding-body">There's also a ceiling on each pulse. Your body can only route so much protein into muscle-building at once — research points to roughly 40g for most people, a bit more for larger or more muscular people. Protein beyond that in a single sitting isn't stored for later use — it gets oxidised for energy instead, the same as any other calorie source. That's why Pulse warns you when one meal is carrying too much: splitting it across two pulses gets more of it actually used for muscle, rather than burned off.</div>
   </div>
 </div>
@@ -465,14 +465,14 @@
         <div class="method-text"><h4>Favourites</h4><p>Your saved foods, one tap to log</p></div>
         <div class="method-chevron">›</div>
       </div>
-      <div class="method-btn primary" id="btnSearchDb">
-        <div class="method-icon alt">🔍</div>
-        <div class="method-text"><h4>Search food database</h4><p>Find packaged foods &amp; common meals</p></div>
+      <div class="method-btn primary" id="btnScanPhoto">
+        <div class="method-icon">📷</div>
+        <div class="method-text"><h4>Photo</h4><p>Point at your plate — fastest way to log</p></div>
         <div class="method-chevron">›</div>
       </div>
-      <div class="method-btn" id="btnScanPhoto">
-        <div class="method-icon">📷</div>
-        <div class="method-text"><h4>Photo</h4><p>Take a new photo or choose one you've got</p></div>
+      <div class="method-btn" id="btnSearchDb">
+        <div class="method-icon alt">🔍</div>
+        <div class="method-text"><h4>Search food database</h4><p>Find packaged foods &amp; common meals</p></div>
         <div class="method-chevron">›</div>
       </div>
       <div class="method-btn" id="btnTypeIn">
@@ -667,7 +667,8 @@
 <script src="js/config.js"></script>
 <script src="js/foods.js"></script>
 <script>
-const SLOT_NAMES = ['Breakfast','Lunch','Dinner','Evening'];
+const SLOT_NAMES = ['Breakfast','Lunch','Dinner'];
+const PULSE_COUNT = SLOT_NAMES.length;
 const SLOT_ICONS = ['🌅','☀️','🌙','🌛'];
 // Real-world clock windows each pulse is meant to represent — used to stop
 // logging "now" (or a backdated time) into a pulse whose actual window
@@ -695,7 +696,7 @@ let currentUser = null;
 let state = {
   goal: 150,
   slotTargets: [38,38,37,37],
-  slots: [[],[],[],[]],
+  slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
   favourites: [],
   foodNotes: {}, // { "eggs": "100g = roughly 2 large eggs" } — keyed by lowercase name
@@ -705,8 +706,8 @@ let pendingFood = null;
 let pendingSlot = 0;
 
 function distributeGoal(goal){
-  const base = Math.floor(goal/4), rem = goal - base*4;
-  return [base+(rem>0?1:0), base+(rem>1?1:0), base+(rem>2?1:0), base];
+  const base = Math.floor(goal/PULSE_COUNT), rem = goal - base*PULSE_COUNT;
+  return Array.from({length:PULSE_COUNT}, (_,i) => base + (i < rem ? 1 : 0));
 }
 
 function currentHour(){ return new Date().getHours(); }
@@ -727,9 +728,9 @@ function activeSlotIndex(){
   // Nothing actively in progress — suggest a pulse that fits the time of day,
   // but never one earlier than the first still-empty pulse (skip past completed ones).
   const h = currentHour();
-  const timeSuggested = h < 11 ? 0 : h < 16 ? 1 : h < 20 ? 2 : 3;
+  const timeSuggested = h < 12 ? 0 : h < 17 ? 1 : 2;
   const firstEmpty = pulses.findIndex(p=>p.state==='empty');
-  if (firstEmpty === -1) return 3;
+  if (firstEmpty === -1) return PULSE_COUNT - 1;
   return Math.max(firstEmpty, timeSuggested);
 }
 
@@ -832,7 +833,7 @@ function getMpsState(entries, slotIdx){
     // Same boundaries activeSlotIndex() uses to suggest "today's" pulse —
     // once the clock passes a pulse's typical hour and nothing was logged,
     // call it missed rather than the more hopeful "not started yet".
-    const missAfterHour = [11, 16, 20, 24];
+    const missAfterHour = [12, 17, 24];
     if (slotIdx != null && currentHour() >= missAfterHour[slotIdx]){
       return { status:'idle', pct:0, label:'Pulse window missed' };
     }
@@ -889,7 +890,8 @@ function updateCoach(){
 
     const missed = pulses.filter(p=>p.state==='closed-short');
     const met = pulses.filter(p=>p.state==='active-met'||p.state==='closed-met');
-    const eveningDone = pulses[3].state==='active-met'||pulses[3].state==='closed-met'||pulses[3].state==='closed-short';
+    const lastPulse = pulses[PULSE_COUNT-1];
+    const lastPulseDone = lastPulse.state==='active-met'||lastPulse.state==='closed-met'||lastPulse.state==='closed-short';
     const nothingLogged = pulses.every(p=>p.state==='empty');
 
     // A pulse in this list always has something logged against it — it just
@@ -917,19 +919,16 @@ function updateCoach(){
         msg = '💪 <strong>'+inProgress.name+' pulse in progress.</strong> You need <strong>'+inProgress.remaining+'g</strong> more to hit your target.'+missedNote;
       }
     }
-    else if (eveningDone){
+    else if (lastPulseDone){
       if (missed.length){
-        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(pulses[3].state!=='closed-short'?'Evening pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of 4. Rest well.';
+        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?'Last pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
       } else {
         msg = '🌙 <strong>That\'s a wrap for today!</strong> <strong>'+total+'g</strong> logged across the day. Solid work — rest well and reset tomorrow.';
       }
     }
-    else if (met.length>=3){
+    else if (met.length === PULSE_COUNT-1){
       const nextEmpty = pulses.find(p=>p.state==='empty');
-      msg = '🚀 <strong>'+met.length+' pulses on target — brilliant!</strong> You\'ve logged <strong>'+total+'g</strong>. One more pulse of <strong>'+(nextEmpty?nextEmpty.target:pulses[3].target)+'g</strong> to finish strong.'+missedNote;
-    }
-    else if (met.length===2){
-      msg = '🔥 <strong>'+met.map(p=>p.name).join(' and ')+' nailed!</strong> You\'ve logged <strong>'+total+'g</strong> — <strong>'+(goal-total)+'g</strong> to go.'+missedNote;
+      msg = '🚀 <strong>'+met.length+' pulses on target — brilliant!</strong> You\'ve logged <strong>'+total+'g</strong>. One more pulse of <strong>'+(nextEmpty?nextEmpty.target:lastPulse.target)+'g</strong> to finish strong.'+missedNote;
     }
     else if (met.length===1){
       const nextPulse = pulses.find(p=>p.state==='empty'); // first pulse that's genuinely still open to log
@@ -1037,12 +1036,12 @@ async function init(){
     const storedDate = data.log_date ? String(data.log_date).slice(0,10) : null;
     if (storedDate === today){
       // Same day — carry on with whatever's logged so far
-      state.slots = data.slots || [[],[],[],[]];
+      state.slots = data.slots || Array.from({length:PULSE_COUNT}, () => []);
     } else {
       // Day has rolled over — bank yesterday's total into history, clear today's slots
       state.weekHistory.shift();
       state.weekHistory.push(0);
-      state.slots = [[],[],[],[]];
+      state.slots = Array.from({length:PULSE_COUNT}, () => []);
       await saveUserData();
     }
   } else {
@@ -1160,12 +1159,12 @@ function render(){
   // Small reference line: what a roughly-even split looks like per pulse.
   // Uses the actual slot targets if they're not perfectly even (they can be
   // off by a gram or two due to remainder distribution), otherwise shows
-  // the simple "goal ÷ 4" version the person actually asked for.
+  // the simple "goal ÷ pulse count" version the person actually asked for.
   const targets = state.slotTargets;
   const allEqual = targets.every(t => t === targets[0]);
   document.getElementById('pulseTargetHint').textContent = allEqual
-    ? state.goal+'g ÷ 4 pulses ≈ '+targets[0]+'g each'
-    : state.goal+'g ÷ 4 pulses ≈ '+targets.join('g · ')+'g';
+    ? state.goal+'g ÷ '+PULSE_COUNT+' pulses ≈ '+targets[0]+'g each'
+    : state.goal+'g ÷ '+PULSE_COUNT+' pulses ≈ '+targets.join('g · ')+'g';
 
   // Days this week (of the 7 tracked) where the daily total met the
   // *current* goal — a simple, always-correct metric since it doesn't try
@@ -1182,7 +1181,7 @@ function render(){
   const expandIdxForStrip = (typeof expandedSlot === 'number') ? expandedSlot : active;
   const stripEl = document.getElementById('strip');
   stripEl.innerHTML = '';
-  for (let i=0;i<4;i++){
+  for (let i=0;i<PULSE_COUNT;i++){
     const status = slotStatus(i);
     const total = slotTotal(i);
     const target = state.slotTargets[i];
@@ -1209,13 +1208,13 @@ function render(){
     stripEl.appendChild(seg);
   }
 
-  // All 4 pulses, rendered in fixed P1→P4 position order — whichever one is
+  // All pulses, rendered in fixed P1→last position order — whichever one is
   // "expanded" just renders bigger in its own slot, it never jumps to the top.
   const expandIdx = (typeof expandedSlot === 'number') ? expandedSlot : active;
   const listEl = document.getElementById('pulseList');
   listEl.innerHTML = '';
 
-  for (let i=0;i<4;i++){
+  for (let i=0;i<PULSE_COUNT;i++){
     const status = slotStatus(i);
     const total = slotTotal(i);
     const target = state.slotTargets[i];
@@ -1509,7 +1508,7 @@ function openSheet(slotIdx){
 // and are skipped here. Returns up to `count` items, most recent first.
 function findRecentMeals(count){
   const all = [];
-  for (let i=0;i<4;i++){
+  for (let i=0;i<PULSE_COUNT;i++){
     (state.slots[i]||[]).forEach(item => {
       if (item.p100 == null) return;
       all.push(item);
@@ -1592,7 +1591,7 @@ function closeSheet(){
 function buildPulseSelect(containerId, onPick){
   const el = document.getElementById(containerId);
   el.innerHTML = '';
-  for (let i=0;i<4;i++){
+  for (let i=0;i<PULSE_COUNT;i++){
     const chip = document.createElement('div');
     chip.className = 'pulse-chip' + (i===pendingSlot?' active':'');
     chip.textContent = 'P'+(i+1);
@@ -1993,7 +1992,7 @@ function customTimestampFor(slotIdx){
 // Finds another pulse whose MPS window is still genuinely open right now —
 // used to warn when starting a NEW pulse too soon after a previous one.
 function findOverlappingSlot(excludeIdx){
-  for (let i=0;i<4;i++){
+  for (let i=0;i<PULSE_COUNT;i++){
     if (i===excludeIdx) continue;
     const entries = state.slots[i] || [];
     if (!entries.length) continue;
