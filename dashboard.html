@@ -286,6 +286,7 @@
       <div class="daily-total"><span class="val" id="dailyTotal">0</span><span class="of">/ <span id="dailyGoalInline">0</span>g protein today</span></div>
       <div class="daily-left">PROTEIN LEFT<br><b id="dailyLeft">0g</b></div>
     </div>
+    <div id="pulseHitBadge" style="display:none; font-family:'DM Sans',sans-serif; font-weight:600; font-size:0.74rem; margin:-6px 2px 4px;"></div>
     <div id="pulseTargetHint" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:0.5px; margin:-8px 2px 4px;"></div>
     <div id="weekStreak" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--g1); letter-spacing:0.5px; margin:0 2px 14px;"></div>
 
@@ -704,6 +705,7 @@ let state = {
   slotTargets: [38,38,37,37],
   bodyWeightKg: null,
   pulseCount: 3,
+  weekAllPulsesHit: [false,false,false,false,false,false,false],
   slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
   favourites: [],
@@ -939,7 +941,9 @@ function updateCoach(){
       if (missed.length){
         msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?lastPulse.name+' pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
       } else {
-        msg = '🌙 <strong>That\'s a wrap for today!</strong> <strong>'+total+'g</strong> logged across the day. Solid work — rest well and reset tomorrow.';
+        msg = met.length === PULSE_COUNT
+          ? '🎯 <strong>Perfect pulse day!</strong> All <strong>'+PULSE_COUNT+' pulses</strong> hit their target — <strong>'+total+'g</strong> logged. That\'s exactly what this app is built to reward, whether or not it reaches your overall daily number. Rest well.'
+          : '🌙 <strong>That\'s a wrap for today!</strong> <strong>'+total+'g</strong> logged across the day. Solid work — rest well and reset tomorrow.';
       }
     }
     else if (met.length === PULSE_COUNT-1){
@@ -1058,6 +1062,7 @@ async function init(){
     state.favourites = data.favourites || [];
     state.foodNotes = data.food_notes || {};
     state.weekHistory = data.week_history || [0,0,0,0,0,0,0];
+    state.weekAllPulsesHit = data.week_all_pulses_hit || [false,false,false,false,false,false,false];
 
     const storedDate = data.log_date ? String(data.log_date).slice(0,10) : null;
     if (storedDate === today){
@@ -1082,9 +1087,20 @@ async function init(){
       state.slots = loadedSlots;
       if (targetsStale || targetsStaleOrSlotsMigrated) await saveUserData(); // persist the correction
     } else {
-      // Day has rolled over — bank yesterday's total into history, clear today's slots
+      // Day has rolled over — bank yesterday's total into history, clear today's slots.
+      // Uses yesterday's own raw slots/targets (not today's, possibly-migrated
+      // state.slotTargets) so a pulse-count change doesn't distort whether
+      // yesterday actually hit every pulse.
+      const ySlots = data.slots || [];
+      const yTargets = data.slot_targets || [];
+      const yesterdayAllHit = ySlots.length > 0 && ySlots.every((entries,i) => {
+        const total = (entries||[]).reduce((s,e)=>s+e.protein,0);
+        return total >= (yTargets[i] || Infinity);
+      });
       state.weekHistory.shift();
       state.weekHistory.push(0);
+      state.weekAllPulsesHit.shift();
+      state.weekAllPulsesHit.push(yesterdayAllHit);
       state.slots = Array.from({length:PULSE_COUNT}, () => []);
       await saveUserData();
     }
@@ -1174,7 +1190,7 @@ async function saveUserData(){
   const today = localDateString();
   const { error } = await db.from('user_data').upsert({
     user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount,
-    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory,
+    slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory, week_all_pulses_hit: state.weekAllPulsesHit,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
   if (error){
@@ -1195,10 +1211,32 @@ function render(){
   const dailyTotal = round1(state.slots.reduce((sum,slot)=>sum+slot.reduce((s,i)=>s+i.protein,0),0));
   state.weekHistory[6] = dailyTotal; // today's running total always lives at index 6
 
+  const pulseStatesForBadge = getPulseStates();
+  const metCountToday = pulseStatesForBadge.filter(p=>p.state==='active-met'||p.state==='closed-met').length;
+  state.weekAllPulsesHit[6] = metCountToday === PULSE_COUNT && PULSE_COUNT > 0;
+
   document.getElementById('goalVal').textContent = state.goal+'g';
   document.getElementById('dailyTotal').textContent = dailyTotal;
   document.getElementById('dailyGoalInline').textContent = state.goal;
   document.getElementById('dailyLeft').textContent = round1(Math.max(0,state.goal-dailyTotal))+'g';
+
+  // Today's pulse-completion badge — separate from the raw gram total, so
+  // someone whose goal outpaces what their pulse count can reach still sees
+  // a clear, positive signal for the thing they actually controlled: hitting
+  // every pulse they had. Only shows once at least one pulse is met, so it
+  // doesn't read as a discouraging "0/3" the moment the day starts.
+  const pulseBadgeEl = document.getElementById('pulseHitBadge');
+  if (pulseBadgeEl){
+    if (metCountToday > 0){
+      pulseBadgeEl.style.display = 'block';
+      pulseBadgeEl.style.color = metCountToday === PULSE_COUNT ? 'var(--green)' : 'var(--muted2)';
+      pulseBadgeEl.textContent = metCountToday === PULSE_COUNT
+        ? `✓ All ${PULSE_COUNT} pulses hit today — nice work`
+        : `✓ ${metCountToday}/${PULSE_COUNT} pulses hit today`;
+    } else {
+      pulseBadgeEl.style.display = 'none';
+    }
+  }
 
   // Small reference line: what a roughly-even split looks like per pulse.
   // Uses the actual slot targets if they're not perfectly even (they can be
@@ -1210,12 +1248,14 @@ function render(){
     ? state.goal+'g ÷ '+PULSE_COUNT+' pulses ≈ '+targets[0]+'g each'
     : state.goal+'g ÷ '+PULSE_COUNT+' pulses ≈ '+targets.join('g · ')+'g';
 
-  // Days this week (of the 7 tracked) where the daily total met the
-  // *current* goal — a simple, always-correct metric since it doesn't try
-  // to reconstruct what the goal was on days it may have been different.
-  const daysHit = state.weekHistory.filter(v => v >= state.goal).length;
+  // Days this week where every pulse was hit — not just "reached the total
+  // daily goal", which can be genuinely out of reach on a lower pulse count
+  // even with perfect adherence. This measures the thing actually within
+  // someone's control, so it stays encouraging rather than reading as a
+  // goal they're structurally unable to win.
+  const daysHit = state.weekAllPulsesHit.filter(Boolean).length;
   document.getElementById('weekStreak').textContent = daysHit > 0
-    ? `🔥 ${daysHit}/7 days hit your goal this week`
+    ? `🔥 ${daysHit}/7 days hit every pulse this week`
     : '';
 
   // Coach message — ported directly from the live app's updateCoach()
