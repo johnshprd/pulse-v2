@@ -1636,7 +1636,7 @@ function renderFoodResultsHTML(results, loadingMore){
     return `
     <div class="food-result" onclick="selectFood('${f.id}', ${f.id.startsWith('usda-') ? 'true' : 'false'})">
       <div class="food-swatch">${f.icon}</div>
-      <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}</h5><span>${f.p100}g protein / 100g${f.kcal100!=null?' · '+f.kcal100+' kcal':''}</span></div>
+      <div class="food-info"><h5>${f.name}${f.brand?' <span style=\"color:var(--muted); font-weight:400;\">· '+f.brand+'</span>':''}${isCustom?' <span style=\"color:var(--g1); font-weight:600; font-size:0.7rem; letter-spacing:0.3px;\">· CUSTOM</span>':''}</h5><span>${f.p100}g protein / 100g${f.kcal100!=null?' · '+f.kcal100+' kcal':''}</span></div>
       ${isCustom ? `<button class="logged-remove" title="Edit this food" onclick="event.stopPropagation(); openEditFood('${f.id}')" style="margin-right:2px; color:var(--g1); font-size:1rem;">✏️</button>` : ''}
       ${isCustom ? `<button class="logged-remove" title="Delete this food" onclick="event.stopPropagation(); deleteCustomFood('${f.id}')">✕</button>` : ''}
       <button class="food-add-btn">+</button>
