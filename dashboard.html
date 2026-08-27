@@ -54,6 +54,14 @@
   .segment.hit .seg-fill-body{ background:#4ade80; }
   .segment.missed .seg-fill-body{ background:#fbbf24; }
   .seg-top-shadow{ position:absolute; top:0; left:0; right:0; height:12px; background:linear-gradient(to bottom, rgba(0,0,0,0.16), rgba(0,0,0,0)); pointer-events:none; z-index:2; }
+  /* A slight raised lip right at the open top edge, like the rim of a
+     measuring jug — a bright highlight above a thin shadow gives it a
+     tiny bit of thickness rather than looking like a flat cut-off. */
+  .seg-rim{ position:absolute; top:0; left:-1.5px; right:-1.5px; height:3px; background:linear-gradient(to bottom, rgba(255,255,255,0.9), var(--border2)); border-radius:2px 2px 0 0; z-index:3; pointer-events:none; }
+  /* Small graduated tick marks down the left inside edge, like a measuring
+     jug's ruler — purely decorative, reinforcing the "how full" metaphor. */
+  .seg-ruler{ position:absolute; top:3px; bottom:0; left:3px; width:6px; z-index:2; pointer-events:none; }
+  .seg-tick{ position:absolute; left:0; width:100%; height:1.5px; background:rgba(0,0,0,0.18); }
   .seg-wave-wrap{ position:absolute; top:-2px; left:0; width:100%; height:10px; overflow:hidden; }
   .seg-wave-wrap svg{ position:absolute; top:0; left:0; width:200%; height:100%; }
   .seg-wave-back{ fill:var(--g1); animation:segWave 3.2s linear infinite; }
@@ -1282,6 +1290,12 @@ function render(){
         </div>`:''}
         <div class="seg-fill-body"></div>
       </div>
+      <div class="seg-ruler">
+        <div class="seg-tick" style="bottom:75%;"></div>
+        <div class="seg-tick" style="bottom:50%;"></div>
+        <div class="seg-tick" style="bottom:25%;"></div>
+      </div>
+      <div class="seg-rim"></div>
       <div class="seg-top-shadow"></div>
       <div class="seg-content">
         <div class="seg-label">P${i+1}${showNow?' · Now':''}</div>
