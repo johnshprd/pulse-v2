@@ -48,8 +48,8 @@
   /* Subtle shading on each inside edge — suggests a curved/glass container
      wall rather than a flat rectangle, without needing any extra markup. */
   .segment::before, .segment::after{ content:''; position:absolute; top:0; bottom:0; width:20px; pointer-events:none; z-index:8; }
-  .segment::before{ left:0; background:linear-gradient(to right, rgba(0,0,0,0.08), rgba(0,0,0,0)); }
-  .segment::after{ right:0; background:linear-gradient(to left, rgba(0,0,0,0.08), rgba(0,0,0,0)); }
+  .segment::before{ left:0; background:linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0)); }
+  .segment::after{ right:0; background:linear-gradient(to left, rgba(0,0,0,0.22), rgba(0,0,0,0)); }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
   .segment.active{ border-color:var(--g1); }
   .segment.hit{ border-color:var(--green); }
