@@ -46,7 +46,7 @@
   .strip{ display:flex; gap:6px; margin-bottom:16px; }
   .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:0 0 14px 14px; border-left:1.5px solid var(--border2); border-right:1.5px solid var(--border2); border-bottom:1.5px solid var(--border2); border-top:none; background:var(--bg); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
-  .segment.active{ border-color:var(--g1); background:rgba(79,70,229,0.07); }
+  .segment.active{ border-color:var(--g1); }
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
   .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:5; transition:height 0.5s ease; overflow:visible; }
