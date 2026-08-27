@@ -460,10 +460,26 @@
     <button class="sheet-close" id="infoSheetClose">✕</button>
   </div>
   <div class="sheet-body">
-    <div class="onboarding-body" style="margin-bottom:20px;">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
-    <div class="onboarding-body" style="margin-bottom:20px;">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse — that's the stretch of time your body is actively building muscle off that meal.</div>
-    <div class="onboarding-body" style="margin-bottom:20px;">Hitting your protein target inside each window (not just somewhere across the day) is what the 3 pulses are for. Missing a window doesn't undo your progress — it just means that particular pulse didn't hit its target.</div>
-    <div class="onboarding-body">There's also a ceiling on each pulse. Your body can only route so much protein into muscle-building at once — research points to roughly 40g for most people, a bit more for larger or more muscular people. Protein beyond that in a single sitting isn't stored for later use — it gets oxidised for energy instead, the same as any other calorie source. That's why Pulse warns you when one meal is carrying too much: splitting it across two pulses gets more of it actually used for muscle, rather than burned off.</div>
+    <div class="pulse-select" style="margin-bottom:18px;">
+      <div class="pulse-chip active" id="infoTabAppBtn">The Pulse app</div>
+      <div class="pulse-chip" id="infoTabScienceBtn">The science</div>
+    </div>
+
+    <div id="infoTabAppContent">
+      <div class="onboarding-body" style="margin-bottom:20px;">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
+      <div class="onboarding-body" style="margin-bottom:20px;">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse — that's the stretch of time your body is actively building muscle off that meal.</div>
+      <div class="onboarding-body" style="margin-bottom:20px;">Hitting your protein target inside each window (not just somewhere across the day) is what the 3 pulses are for. Missing a window doesn't undo your progress — it just means that particular pulse didn't hit its target.</div>
+      <div class="onboarding-body">There's also a ceiling on each pulse. Your body can only route so much protein into muscle-building at once — research points to roughly 40g for most people, a bit more for larger or more muscular people. Protein beyond that in a single sitting isn't stored for later use — it gets oxidised for energy instead, the same as any other calorie source. That's why Pulse warns you when one meal is carrying too much: splitting it across two pulses gets more of it actually used for muscle, rather than burned off.</div>
+    </div>
+
+    <div id="infoTabScienceContent" style="display:none;">
+      <div class="onboarding-body" style="margin-bottom:20px;">Most nutrition tracking is built around one number: your daily total. But research shows <b>when</b> you eat protein matters almost as much as how much — because muscle protein synthesis (MPS) isn't something you can just top up whenever. It rises after a meal, peaks, then tapers off over a few hours, no matter what else you eat on top of it.</div>
+      <div class="onboarding-body" style="margin-bottom:20px;">There's a practical ceiling per meal too. A widely cited review (Schoenfeld &amp; Aragon, 2018) puts it at roughly 0.4–0.55g of protein per kg of body weight — beyond that, extra protein in one sitting isn't doing much extra work for your muscles; it mostly just gets used as energy instead.</div>
+      <div class="onboarding-body" style="margin-bottom:20px;">Spacing matters as much as amount. Areta and colleagues (2013) compared three feeding patterns using the same total protein: very frequent small doses, moderate doses every 3 hours, or two large meals. The 3-hourly moderate pattern won, beating both extremes.</div>
+      <div class="onboarding-body" style="margin-bottom:20px;">Distribution matters more than most people realise, too. Mamerow and colleagues (2014) found spreading protein evenly across breakfast, lunch and dinner produced 25% more muscle protein synthesis over 24 hours than the exact same total protein skewed toward a big dinner — a very common real-world eating pattern.</div>
+      <div class="onboarding-body" style="margin-bottom:20px; color:var(--muted); font-size:0.78rem;">Sources: Areta et al., <i>J Physiol</i> 2013 · Mamerow et al., <i>J Nutr</i> 2014 · Schoenfeld &amp; Aragon, <i>JISSN</i> 2018.</div>
+      <div class="onboarding-body">That's the whole idea behind a pulse. Not eat more — just eat on a rhythm that actually gives your body a chance to use it.</div>
+    </div>
   </div>
 </div>
 
@@ -2719,7 +2735,18 @@ document.getElementById('settingsBtn').onclick = openSettingsSheet;
 document.getElementById('settingsSheetClose').onclick = closeSettingsSheet;
 document.getElementById('settingsSheetBackdrop').onclick = closeSettingsSheet;
 
+function switchInfoTab(tab){
+  const isApp = tab === 'app';
+  document.getElementById('infoTabAppBtn').classList.toggle('active', isApp);
+  document.getElementById('infoTabScienceBtn').classList.toggle('active', !isApp);
+  document.getElementById('infoTabAppContent').style.display = isApp ? 'block' : 'none';
+  document.getElementById('infoTabScienceContent').style.display = isApp ? 'none' : 'block';
+}
+document.getElementById('infoTabAppBtn').onclick = () => switchInfoTab('app');
+document.getElementById('infoTabScienceBtn').onclick = () => switchInfoTab('science');
+
 function openInfoSheet(){
+  switchInfoTab('app'); // always open on the same tab, regardless of where it was left last time
   document.getElementById('infoSheetBackdrop').classList.add('open');
   document.getElementById('infoSheet').classList.add('open');
 }
