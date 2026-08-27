@@ -899,7 +899,7 @@ function updateCoach(){
     // Falls back to the population-average 40-55g when weight isn't known.
     const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.55) : 55;
     const ceilingLow = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.4) : 40;
-    const overCeiling = pulses.filter(p=>p.total>ceiling).length;
+    const overPulses = pulses.filter(p=>p.total>ceiling);
 
     let mostRecentTs=-1, inProgress=null;
     state.slots.forEach((entries,i)=>{
@@ -926,11 +926,14 @@ function updateCoach(){
     if (total>=goal){
       msg = '🏆 <strong>Daily goal reached!</strong> Outstanding — you\'ve given your muscles the best chance to grow today.';
     }
-    else if (overCeiling>0){
+    else if (overPulses.length>0){
       const suggestion = state.pulseCount < 4
         ? 'try switching to 4 pulses a day in Settings, so each one carries less'
         : 'try spreading that protein across two pulses next time';
-      msg = '⚠️ <strong>One pulse is over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — '+suggestion+'.';
+      const whichPulse = overPulses.length === 1
+        ? overPulses[0].name+' is'
+        : overPulses.length+' pulses are';
+      msg = '⚠️ <strong>'+whichPulse+' over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — '+suggestion+'.';
     }
     else if (nothingLogged){
       const ico = hour<12?'🌅':hour<17?'⏰':'🌙';
