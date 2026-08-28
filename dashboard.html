@@ -47,7 +47,7 @@
   .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:0 0 14px 14px; border:none; background:var(--bg); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   /* Subtle shading on each inside edge — suggests a curved/glass container
      wall rather than a flat rectangle, without needing any extra markup. */
-  .segment::before, .segment::after{ content:''; position:absolute; top:0; bottom:0; width:20px; pointer-events:none; z-index:8; }
+  .segment::before, .segment::after{ content:''; position:absolute; top:20%; bottom:0; width:20px; pointer-events:none; z-index:8; }
   .segment::before{ left:0; background:linear-gradient(to right, rgba(0,0,0,0.22), rgba(0,0,0,0)); }
   .segment::after{ right:0; background:linear-gradient(to left, rgba(0,0,0,0.22), rgba(0,0,0,0)); }
   /* Small curled lip at each top corner, like the rim of a flask —
@@ -1337,9 +1337,9 @@ function render(){
     const lipColor = status==='missed' ? 'var(--amber)' : status==='hit' ? 'var(--green)' : i===expandIdxForStrip ? 'var(--g1)' : 'var(--border2)';
     seg.innerHTML = `
       <svg class="seg-outline" viewBox="0 0 100 140" preserveAspectRatio="none" fill="none">
-        <path d="M 1 0 L 1 12 C 1 12 7 16 7 20 C 7 24 1 26 1 30 L 1 118 C 1 124 5 128 11 128 L 89 128 C 95 128 99 124 99 118 L 99 30 C 99 26 93 24 93 20 C 93 16 99 12 99 0" stroke="${lipColor}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+        <path d="M 1 0 L 1 12 C 1 12 7 16 7 20 C 7 24 1 26 1 28 L 1 130 C 1 137 5 140 11 140 L 89 140 C 95 140 99 137 99 130 L 99 28 C 99 26 93 24 93 20 C 93 16 99 12 99 0" stroke="${lipColor}" stroke-width="1.3" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
       </svg>
-      <div class="seg-fill" style="height:${pct}%;">
+      <div class="seg-fill" style="height:${pct*0.8}%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg>
