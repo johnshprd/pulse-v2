@@ -249,10 +249,10 @@
 
     <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-emoji">⏱️</div>
-      <div class="onboarding-title">Four pulses a day</div>
+      <div class="onboarding-title">Three pulses a day</div>
       <div class="onboarding-body">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse.</div>
       <div class="onboarding-pulses-demo">
-        <span class="lit">P1</span><span>P2</span><span>P3</span><span>P4</span>
+        <span class="lit">P1</span><span>P2</span><span>P3</span>
       </div>
     </div>
 
@@ -663,6 +663,10 @@
         <button onclick="clearBackdateTime('portionTimeToggle','portionTimePicker')" style="background:var(--surface); border:1px solid var(--border2); color:var(--muted); border-radius:6px; padding:7px 11px; font-family:'Space Mono',monospace; font-size:0.66rem; cursor:pointer;">✕</button>
       </div>
       <div id="portionTimeDecision"></div>
+      <div id="favTipCallout" style="display:none; background:rgba(79,70,229,0.08); border:1.5px solid var(--g1); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+        <div style="font-family:'DM Sans',sans-serif; font-size:0.8rem; color:var(--text); line-height:1.4; margin-bottom:8px;">💡 <b>Tip:</b> Tick this to save it as a favourite — one tap to log it again next time.</div>
+        <button id="favTipDismiss" style="background:var(--g1); border:none; color:#fff; border-radius:8px; padding:7px 14px; font-family:'DM Sans',sans-serif; font-size:0.76rem; font-weight:600; cursor:pointer;">Got it</button>
+      </div>
       <label style="display:flex; align-items:center; gap:8px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; cursor:pointer;">
         <input type="checkbox" id="portionSaveFav" style="width:16px; height:16px; accent-color:var(--g1);"> ⭐ Save as favourite for quick logging later
       </label>
@@ -754,6 +758,7 @@ let state = {
   bodyWeightKg: null,
   pulseCount: 3,
   seenPhotoTip: false,
+  seenFavouriteTip: false,
   weekAllPulsesHit: [false,false,false,false,false,false,false],
   slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
@@ -1101,6 +1106,7 @@ async function init(){
     state.goal = data.goal || 150;
     state.bodyWeightKg = data.body_weight_kg || null;
     state.seenPhotoTip = !!data.seen_photo_tip;
+    state.seenFavouriteTip = !!data.seen_favourite_tip;
     state.pulseCount = data.pulse_count || 3;
     SLOT_NAMES = ALL_SLOT_NAMES.slice(0, state.pulseCount);
     PULSE_COUNT = SLOT_NAMES.length;
@@ -1251,7 +1257,7 @@ function checkMidnight(){
 async function saveUserData(){
   const today = localDateString();
   const { error } = await db.from('user_data').upsert({
-    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount, seen_photo_tip: state.seenPhotoTip,
+    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount, seen_photo_tip: state.seenPhotoTip, seen_favourite_tip: state.seenFavouriteTip,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory, week_all_pulses_hit: state.weekAllPulsesHit,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
@@ -1658,6 +1664,16 @@ async function dismissPhotoTip(){
   await saveUserData();
 }
 document.getElementById('photoTipDismiss').onclick = dismissPhotoTip;
+
+async function dismissFavTip(){
+  state.seenFavouriteTip = true;
+  document.getElementById('favTipCallout').style.display = 'none';
+  await saveUserData();
+}
+document.getElementById('favTipDismiss').onclick = dismissFavTip;
+document.getElementById('portionSaveFav').addEventListener('change', function(){
+  if (this.checked && !state.seenFavouriteTip) dismissFavTip();
+});
 
 // Most recently logged foods today, deduplicated by name, that have a real
 // protein-per-100g ratio (custom foods / USDA results) — manually typed-in
@@ -2106,6 +2122,7 @@ function selectFood(id, isUsda){
   document.getElementById('portionGrams').value = pendingFood.typical;
   document.getElementById('portionTimeDecision').innerHTML = '';
   document.getElementById('portionSaveFav').checked = false;
+  document.getElementById('favTipCallout').style.display = state.seenFavouriteTip ? 'none' : 'block';
   updatePortionCalc();
   buildPulseSelect('pulseSelect', () => buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput'));
   buildBackdateToggle('portionTimeToggle','portionTimePicker','portionTimeInput');
