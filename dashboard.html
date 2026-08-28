@@ -53,10 +53,9 @@
   /* Small curled lip at each top corner, like the rim of a flask —
      a quarter-circle clipped from a bordered ring, coloured to match
      whichever border colour this specific container already has. */
-  .seg-lip{ position:absolute; top:0; width:13px; height:13px; border:2px solid var(--border2); border-radius:50%; z-index:9; pointer-events:none; }
-  .segment.active .seg-lip{ border-color:var(--g1); }
-  .seg-lip-left{ left:-2px; clip-path:inset(0 50% 50% 0); }
-  .seg-lip-right{ right:-2px; clip-path:inset(0 0 50% 50%); }
+  .seg-lip{ position:absolute; top:0; width:16px; height:18px; z-index:9; pointer-events:none; }
+  .seg-lip-left{ left:-2px; }
+  .seg-lip-right{ right:-2px; }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
   .segment.active{ border-color:var(--g1); }
   .segment.hit{ border-color:var(--green); }
@@ -1337,9 +1336,10 @@ function render(){
     seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'') + (pct>=45?' has-fill':'');
     const mpsStatus = getMpsState(state.slots[i]||[], i).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
+    const lipColor = i===expandIdxForStrip ? 'var(--g1)' : 'var(--border2)';
     seg.innerHTML = `
-      <div class="seg-lip seg-lip-left"></div>
-      <div class="seg-lip seg-lip-right"></div>
+      <div class="seg-lip seg-lip-left"><svg width="16" height="18" viewBox="0 0 16 18" fill="none"><path d="M13 2 C13 2 3 4 3 10 C3 14 7 16 11 16" stroke="${lipColor}" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+      <div class="seg-lip seg-lip-right"><svg width="16" height="18" viewBox="0 0 16 18" fill="none"><path d="M3 2 C3 2 13 4 13 10 C13 14 9 16 5 16" stroke="${lipColor}" stroke-width="2.5" stroke-linecap="round"/></svg></div>
       <div class="seg-fill" style="height:${pct}%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
