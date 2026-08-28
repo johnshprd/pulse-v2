@@ -43,8 +43,8 @@
   .daily-left{ font-family:'DM Sans',sans-serif; font-size:0.68rem; color:var(--muted2); letter-spacing:1px; text-align:right; }
   .daily-left b{ color:var(--g1); font-size:0.86rem; }
 
-  .strip{ display:flex; gap:6px; margin-bottom:16px; margin-top:16px; }
-  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:0 0 14px 14px; border-left:1.5px solid var(--border2); border-right:1.5px solid var(--border2); border-bottom:1.5px solid var(--border2); border-top:none; background:var(--bg); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .strip{ display:flex; gap:6px; margin-bottom:16px; margin-top:8px; }
+  .segment{ flex:1; text-align:center; padding:10px 4px; border-radius:0 0 14px 14px; border:none; background:var(--bg); cursor:pointer; position:relative; overflow:hidden; transition:transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
   /* Subtle shading on each inside edge — suggests a curved/glass container
      wall rather than a flat rectangle, without needing any extra markup. */
   .segment::before, .segment::after{ content:''; position:absolute; top:0; bottom:0; width:20px; pointer-events:none; z-index:8; }
@@ -53,11 +53,10 @@
   /* Small curled lip at each top corner, like the rim of a flask —
      a quarter-circle clipped from a bordered ring, coloured to match
      whichever border colour this specific container already has. */
-  .segment-wrap{ flex:1; position:relative; }
-  .segment-wrap .segment{ flex:none; width:100%; }
-  .seg-squiggle{ position:absolute; top:-13px; z-index:9; pointer-events:none; }
-  .seg-squiggle-left{ left:-1px; }
-  .seg-squiggle-right{ right:-1px; }
+  /* The container's actual visible outline — drawn as one continuous SVG
+     path (not CSS borders) so a small inward pinch near the top can be
+     built directly into the line itself, open at the very top. */
+  .seg-outline{ position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; pointer-events:none; }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
   .segment.active{ border-color:var(--g1); }
   .segment.hit{ border-color:var(--green); }
@@ -1340,6 +1339,9 @@ function render(){
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     const lipColor = i===expandIdxForStrip ? 'var(--g1)' : 'var(--border2)';
     seg.innerHTML = `
+      <svg class="seg-outline" viewBox="0 0 100 140" preserveAspectRatio="none" fill="none">
+        <path d="M 1 0 L 1 12 C 1 12 7 16 7 20 C 7 24 1 26 1 30 L 1 118 C 1 124 5 128 11 128 L 89 128 C 95 128 99 124 99 118 L 99 30 C 99 26 93 24 93 20 C 93 16 99 12 99 0" stroke="${lipColor}" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      </svg>
       <div class="seg-fill" style="height:${pct}%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
@@ -1358,18 +1360,7 @@ function render(){
         <div class="seg-target">of ${target}g</div>
       </div>`;
     seg.onclick = () => pulseTapFeedback(seg, () => { expandedSlot = i; render(); });
-
-    // Outer wrapper is NOT overflow:hidden, so the two zigzag squiggles can
-    // actually poke above the container's open top edge instead of getting
-    // clipped away by the segment's own overflow:hidden (needed to contain
-    // the wave/fill animation).
-    const wrap = document.createElement('div');
-    wrap.className = 'segment-wrap';
-    wrap.innerHTML = `
-      <svg class="seg-squiggle seg-squiggle-left" width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M7 15 L4 11 L9 8 L4 5 L7 1" stroke="${lipColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <svg class="seg-squiggle seg-squiggle-right" width="14" height="16" viewBox="0 0 14 16" fill="none"><path d="M7 15 L10 11 L5 8 L10 5 L7 1" stroke="${lipColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    wrap.appendChild(seg);
-    stripEl.appendChild(wrap);
+    stripEl.appendChild(seg);
   }
 
   // All pulses, rendered in fixed P1→last position order — whichever one is
