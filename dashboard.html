@@ -59,7 +59,11 @@
       linear-gradient(to top, rgba(0,0,0,0.22), rgba(0,0,0,0) 6px);
   }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
-  .segment.active{ border-color:var(--g1); box-shadow:0 0 0 2px rgba(79,70,229,0.18), 0 4px 14px rgba(79,70,229,0.22); }
+  .segment.active{ border-color:var(--g1); border-width:2px; box-shadow:0 0 0 3px rgba(79,70,229,0.28), 0 0 22px rgba(79,70,229,0.45), 0 6px 18px rgba(79,70,229,0.3); animation:activeGlowPulse 2.4s ease-in-out infinite; }
+  @keyframes activeGlowPulse{
+    0%,100%{ box-shadow:0 0 0 3px rgba(79,70,229,0.28), 0 0 22px rgba(79,70,229,0.45), 0 6px 18px rgba(79,70,229,0.3); }
+    50%{ box-shadow:0 0 0 3px rgba(79,70,229,0.4), 0 0 32px rgba(79,70,229,0.6), 0 6px 18px rgba(79,70,229,0.38); }
+  }
   .segment.hit{ border-color:var(--green); }
   .segment.missed{ border-color:var(--amber); }
   .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:5; transition:height 0.5s ease; overflow:visible; }
