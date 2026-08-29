@@ -222,6 +222,9 @@
 
   .mock-item-card{ background:var(--surface); border:1.5px solid var(--border2); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
   .mock-item-card.uncertain{ border-color:var(--amber); }
+  .mock-item-card.low-protein{ padding:8px 14px; background:transparent; border-color:transparent; opacity:0.62; }
+  .mock-item-card.low-protein .mock-item-name{ font-weight:500; font-size:0.8rem; }
+  .mock-item-card.low-protein .mock-item-swatch{ width:24px; height:24px; font-size:0.85rem; background:transparent; }
   .mock-item-top{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
   .mock-item-swatch{ width:30px; height:30px; border-radius:7px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1rem; background:var(--surface2); }
   .mock-item-name{ flex:1; border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; font-weight:700; color:var(--text); min-width:0; }
@@ -2557,6 +2560,7 @@ function startScan(fileInputEl){
         protein: round1(f.proteinG || 0),
         confidence: f.confidence || null,
         uncertain: f.confidence === 'low',
+        lowProtein: (f.proteinG || 0) < 3,
       }));
       document.getElementById('sheetTitle').textContent = 'Confirm meal';
       renderScanItems();
@@ -2573,7 +2577,7 @@ function startScan(fileInputEl){
 function renderScanItems(){
   const el = document.getElementById('mockItemsList');
   el.innerHTML = scanItems.map((item, idx) => `
-    <div class="mock-item-card ${item.uncertain?'uncertain':''}">
+    <div class="mock-item-card ${item.uncertain?'uncertain':''} ${item.lowProtein?'low-protein':''}">
       <div class="mock-item-top">
         <div class="mock-item-swatch">${item.icon}</div>
         <input class="mock-item-name" value="${item.name}" onchange="scanItems[${idx}].name=this.value">
