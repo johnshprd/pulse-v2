@@ -1021,7 +1021,7 @@ function updateCoach(){
     else if (overPulses.length>0){
       const suggestion = state.pulseCount < 4
         ? 'try switching to 4 pulses a day in Settings, so each one carries less'
-        : 'try spreading that protein across two pulses next time';
+        : 'try splitting that between two pulses next time';
       const whichPulse = overPulses.length === 1
         ? overPulses[0].name+' is'
         : overPulses.length+' pulses are';
