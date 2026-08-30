@@ -949,6 +949,32 @@ function dayTotal(){ return round1(state.slots.reduce((s,_,i)=>s+slotTotal(i),0)
 
 // Ported directly from the live app's updateCoach() — same priority order,
 // same messages, same 55g MPS-ceiling warning, same evening wrap-up logic.
+let coachTypeGen = 0;
+function typewriterSet(el, html, speed){
+  speed = speed || 22;
+  const gen = ++coachTypeGen;
+  const tokens = html.split(/(<[^>]+>)/g).filter(Boolean);
+  el.innerHTML = '';
+  let ti = 0, ci = 0, buffer = '';
+  function step(){
+    if (gen !== coachTypeGen) return; // superseded by a newer message
+    if (ti >= tokens.length) return;
+    const tok = tokens[ti];
+    if (tok.charAt(0) === '<'){
+      buffer += tok;
+      el.innerHTML = buffer;
+      ti++; ci = 0;
+      setTimeout(step, 0);
+      return;
+    }
+    buffer += tok.charAt(ci);
+    el.innerHTML = buffer;
+    ci++;
+    if (ci >= tok.length){ ti++; ci = 0; }
+    setTimeout(step, speed);
+  }
+  step();
+}
 function updateCoach(){
   const textEl = document.getElementById('coachText');
   if (!textEl) return;
@@ -1037,7 +1063,7 @@ function updateCoach(){
     else {
       msg = '👍 <strong>Keep it up!</strong> You\'ve logged <strong>'+total+'g</strong> today — <strong>'+(goal-total)+'g</strong> to go. Space your remaining pulses evenly for max MPS.';
     }
-    textEl.innerHTML = msg;
+    typewriterSet(textEl, msg);
   } catch(e){
     textEl.textContent = 'Log a meal to get coaching tips.';
   }
