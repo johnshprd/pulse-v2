@@ -950,6 +950,7 @@ function dayTotal(){ return round1(state.slots.reduce((s,_,i)=>s+slotTotal(i),0)
 // Ported directly from the live app's updateCoach() — same priority order,
 // same messages, same 55g MPS-ceiling warning, same evening wrap-up logic.
 let coachTypeGen = 0;
+let coachAnimateNext = false; // only teleprinter-type the coach message right after a food entry
 function typewriterSet(el, html, speed){
   speed = speed || 22;
   const gen = ++coachTypeGen;
@@ -1063,7 +1064,13 @@ function updateCoach(){
     else {
       msg = '👍 <strong>Keep it up!</strong> You\'ve logged <strong>'+total+'g</strong> today — <strong>'+(goal-total)+'g</strong> to go. Space your remaining pulses evenly for max MPS.';
     }
-    typewriterSet(textEl, msg);
+    if (coachAnimateNext){
+      coachAnimateNext = false;
+      typewriterSet(textEl, msg);
+    } else {
+      coachTypeGen++; // cancel any in-flight animation from a prior entry
+      textEl.innerHTML = msg;
+    }
   } catch(e){
     textEl.textContent = 'Log a meal to get coaching tips.';
   }
@@ -2220,6 +2227,7 @@ function findOverlappingSlot(excludeIdx){
 // entries: array of {name,icon,grams,protein,id,p100} — loggedAt attached once resolved.
 // A single time decision applies to the whole batch (a scanned meal is one sitting).
 function resolveLogTime(slotIdx, entries, decisionContainerId){
+  coachAnimateNext = true;
   if (!Array.isArray(entries)) entries = [entries];
   const displayName = entries.length===1 ? entries[0].name : entries.length+' items';
   const existing = state.slots[slotIdx] || [];
