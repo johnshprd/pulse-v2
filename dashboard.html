@@ -774,6 +774,7 @@ let state = {
   pulseCount: 3,
   seenPhotoTip: false,
   seenFavouriteTip: false,
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/London',
   weekAllPulsesHit: [false,false,false,false,false,false,false],
   slots: Array.from({length:PULSE_COUNT}, () => []),
   customFoods: [],
@@ -1156,6 +1157,7 @@ async function init(){
     state.bodyWeightKg = data.body_weight_kg || null;
     state.seenPhotoTip = !!data.seen_photo_tip;
     state.seenFavouriteTip = !!data.seen_favourite_tip;
+    state.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || data.timezone || 'Europe/London';
     state.pulseCount = data.pulse_count || 3;
     SLOT_NAMES = ALL_SLOT_NAMES.slice(0, state.pulseCount);
     PULSE_COUNT = SLOT_NAMES.length;
@@ -1306,7 +1308,7 @@ function checkMidnight(){
 async function saveUserData(){
   const today = localDateString();
   const { error } = await db.from('user_data').upsert({
-    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount, seen_photo_tip: state.seenPhotoTip, seen_favourite_tip: state.seenFavouriteTip,
+    user_id: currentUser.id, goal: state.goal, slot_targets: state.slotTargets, body_weight_kg: state.bodyWeightKg || null, pulse_count: state.pulseCount, seen_photo_tip: state.seenPhotoTip, seen_favourite_tip: state.seenFavouriteTip, timezone: state.timezone,
     slots: state.slots, log_date: today, custom_foods: state.customFoods, favourites: state.favourites, food_notes: state.foodNotes, week_history: state.weekHistory, week_all_pulses_hit: state.weekAllPulsesHit,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
