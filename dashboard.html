@@ -1391,7 +1391,7 @@ function render(){
     const mpsStatus = getMpsState(state.slots[i]||[], i).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     seg.innerHTML = `
-      <div class="seg-fill" style="height:${pct}%;">
+      <div class="seg-fill" data-pct="${pct}" style="height:0%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg>
@@ -1411,6 +1411,11 @@ function render(){
     seg.onclick = () => pulseTapFeedback(seg, () => { expandedSlot = i; render(); });
     stripEl.appendChild(seg);
   }
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    stripEl.querySelectorAll('.seg-fill').forEach(el => {
+      el.style.height = el.dataset.pct + '%';
+    });
+  }));
 
   // All pulses, rendered in fixed P1→last position order — whichever one is
   // "expanded" just renders bigger in its own slot, it never jumps to the top.
