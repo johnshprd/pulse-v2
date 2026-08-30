@@ -66,7 +66,7 @@
   }
   .segment.hit{ }
   .segment.missed{ }
-  .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:5; transition:height 0.5s ease; overflow:visible; }
+  .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:5; transition:height 1.3s ease; overflow:visible; }
   .seg-fill-body{ position:absolute; top:5px; left:0; right:0; bottom:-2px; background:#7c74ea; }
   .segment.hit .seg-fill-body{ background:#4ade80; }
   .segment.missed .seg-fill-body{ background:#fbbf24; }
@@ -951,6 +951,7 @@ function dayTotal(){ return round1(state.slots.reduce((s,_,i)=>s+slotTotal(i),0)
 // same messages, same 55g MPS-ceiling warning, same evening wrap-up logic.
 let coachTypeGen = 0;
 let coachAnimateNext = false; // only teleprinter-type the coach message right after a food entry
+let fillAnimateNext = false; // only animate the vessel fill rising right after a food entry
 function typewriterSet(el, html, speed){
   speed = speed || 22;
   const gen = ++coachTypeGen;
@@ -1391,7 +1392,7 @@ function render(){
     const mpsStatus = getMpsState(state.slots[i]||[], i).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
     seg.innerHTML = `
-      <div class="seg-fill" data-pct="${pct}" style="height:0%;">
+      <div class="seg-fill" data-pct="${pct}" style="height:${fillAnimateNext?0:pct}%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg>
@@ -1411,11 +1412,14 @@ function render(){
     seg.onclick = () => pulseTapFeedback(seg, () => { expandedSlot = i; render(); });
     stripEl.appendChild(seg);
   }
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    stripEl.querySelectorAll('.seg-fill').forEach(el => {
-      el.style.height = el.dataset.pct + '%';
-    });
-  }));
+  if (fillAnimateNext){
+    fillAnimateNext = false;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      stripEl.querySelectorAll('.seg-fill').forEach(el => {
+        el.style.height = el.dataset.pct + '%';
+      });
+    }));
+  }
 
   // All pulses, rendered in fixed P1→last position order — whichever one is
   // "expanded" just renders bigger in its own slot, it never jumps to the top.
@@ -2233,6 +2237,7 @@ function findOverlappingSlot(excludeIdx){
 // A single time decision applies to the whole batch (a scanned meal is one sitting).
 function resolveLogTime(slotIdx, entries, decisionContainerId){
   coachAnimateNext = true;
+  fillAnimateNext = true;
   if (!Array.isArray(entries)) entries = [entries];
   const displayName = entries.length===1 ? entries[0].name : entries.length+' items';
   const existing = state.slots[slotIdx] || [];
