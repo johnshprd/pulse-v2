@@ -1011,7 +1011,7 @@ function updateCoach(){
     // didn't reach its target before the window closed — so this is worded
     // as a shortfall, never as "you missed it"/"you didn't log it".
     const shortfallParts = missed.map(p=>p.name+' ('+p.total+'g of '+p.target+'g)');
-    const missedNote = missed.length ? ' You came up short on '+shortfallParts.join(' and ')+', but keep hitting your active pulses.' : '';
+    const missedNote = missed.length ? ' Your 3-hour window closed before you could top up '+shortfallParts.join(' and ')+', but keep hitting your active pulses.' : '';
 
     let msg;
 
@@ -1040,7 +1040,7 @@ function updateCoach(){
     }
     else if (lastPulseDone){
       if (missed.length){
-        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?lastPulse.name+' pulse hit — nice way to close things out. ':'')+'You came up short on '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
+        msg = '🌙 <strong>That\'s a wrap for today!</strong> '+(lastPulse.state!=='closed-short'?lastPulse.name+' pulse hit — nice way to close things out. ':'')+'Your 3-hour window closed before you could top up '+shortfallParts.join(' and ')+' today, but tomorrow\'s a fresh set of '+PULSE_COUNT+'. Rest well.';
       } else {
         msg = met.length === PULSE_COUNT
           ? '🎯 <strong>Perfect pulse day!</strong> All <strong>'+PULSE_COUNT+' pulses</strong> hit their target — <strong>'+total+'g</strong> logged. That\'s exactly what this app is built to reward, whether or not it reaches your overall daily number. Rest well.'
