@@ -402,19 +402,17 @@
 </div>
 
 <div class="sheet-backdrop" id="dayDetailBackdrop"></div>
-<div class="sheet" id="dayDetailSheet">
+<div class="sheet" id="dayDetailSheet" style="height:82vh; max-height:82vh; display:flex; flex-direction:column; padding-bottom:0;">
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <div class="sheet-title" id="dayDetailTitle">—</div>
     <button class="sheet-close" id="dayDetailClose">✕</button>
   </div>
-  <div class="sheet-body">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
-      <button id="dayDetailPrev" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:8px 14px; font-family:'Space Mono',monospace; font-size:0.7rem; cursor:pointer;">← PREV DAY</button>
-      <button id="dayDetailNext" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:8px 14px; font-family:'Space Mono',monospace; font-size:0.7rem; cursor:pointer;">NEXT DAY →</button>
-    </div>
-    <div id="dayDetailBody"></div>
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 18px 0; flex-shrink:0;">
+    <button id="dayDetailPrev" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:8px 14px; font-family:'Space Mono',monospace; font-size:0.7rem; cursor:pointer;">← PREV DAY</button>
+    <button id="dayDetailNext" style="background:var(--surface2); border:1px solid var(--border2); border-radius:8px; padding:8px 14px; font-family:'Space Mono',monospace; font-size:0.7rem; cursor:pointer;">NEXT DAY →</button>
   </div>
+  <div id="dayDetailBody" style="flex:1; overflow-y:auto; padding:16px 18px 20px;"></div>
 </div>
 
 <div class="sheet-backdrop" id="goalSheetBackdrop"></div>
