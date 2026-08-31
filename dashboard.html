@@ -1054,10 +1054,11 @@ function updateCoach(){
     else if (met.length===1){
       const nextPulse = pulses.find(p=>p.state==='empty'); // first pulse that's genuinely still open to log
       const nextPulseRef = nextPulse ? nextPulse.name : 'your next pulse';
+      const nextPulseTarget = nextPulse ? ' — aim for <strong>'+nextPulse.target+'g</strong> for '+nextPulse.name : '';
       if (met[0].state==='closed-met'){
-        msg = '✅ <strong>'+met[0].name+' done!</strong> Ready for '+nextPulseRef+' whenever you are — <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
+        msg = '✅ <strong>'+met[0].name+' done!</strong> Ready for '+nextPulseRef+' whenever you are'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
       } else {
-        msg = '✅ <strong>'+met[0].name+' done!</strong> Aim for your next meal in 3–4 hours — <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
+        msg = '✅ <strong>'+met[0].name+' done!</strong> Aim for your next meal in 3–4 hours'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
       }
     }
     else if (hour>=20 && total<goal*0.75){
