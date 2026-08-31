@@ -956,6 +956,15 @@ let lastRenderedPct = {}; // tracks each vessel's last-drawn fill % so animation
 function typewriterSet(el, html, speed){
   speed = speed || 40;
   const gen = ++coachTypeGen;
+
+  // Reserve the final rendered height up front, so the bubble doesn't grow
+  // line-by-line as text is revealed and push everything below it down
+  // mid-animation.
+  el.style.minHeight = '';
+  el.innerHTML = html;
+  const finalHeight = el.offsetHeight;
+  el.style.minHeight = finalHeight + 'px';
+
   const tokens = html.split(/(<[^>]+>)/g).filter(Boolean);
   el.innerHTML = '';
   let ti = 0, ci = 0, buffer = '';
