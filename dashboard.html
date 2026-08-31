@@ -978,7 +978,7 @@ function typewriterSet(el, html, speed){
   }
   step();
 }
-function updateCoach(){
+async function updateCoach(){
   const textEl = document.getElementById('coachText');
   if (!textEl) return;
   try {
@@ -1069,7 +1069,30 @@ function updateCoach(){
     }
     if (coachAnimateNext){
       coachAnimateNext = false;
-      typewriterSet(textEl, msg);
+      let finalMsg = msg;
+      try {
+        const boldFacts = (msg.match(/<strong>.*?<\/strong>/g) || []);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const resp = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/restyle-coach-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON}` },
+          body: JSON.stringify({ message: msg }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const data = await resp.json();
+        const restyled = data.restyled;
+        // Safety check: every bolded fact from the deterministic message must
+        // survive verbatim in the AI version, or we don't trust it - the whole
+        // point is the facts never change, only the wording around them.
+        const allFactsPresent = restyled && boldFacts.every(f => restyled.includes(f));
+        if (resp.ok && allFactsPresent) finalMsg = restyled;
+      } catch(restyleErr) {
+        // Network error, timeout, or bad response - deterministic message
+        // is always a safe fallback, so just proceed with it.
+      }
+      typewriterSet(textEl, finalMsg);
     } else {
       coachTypeGen++; // cancel any in-flight animation from a prior entry
       textEl.innerHTML = msg;
