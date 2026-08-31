@@ -991,7 +991,7 @@ function updateCoach(){
     // Falls back to the population-average 40-55g when weight isn't known.
     const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.55) : 55;
     const ceilingLow = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.4) : 40;
-    const overPulses = pulses.filter(p=>p.total>ceiling);
+    const overPulses = pulses.filter(p=>p.total>ceiling && (p.state==='active'||p.state==='active-met'));
 
     let mostRecentTs=-1, inProgress=null;
     state.slots.forEach((entries,i)=>{
