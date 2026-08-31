@@ -1086,13 +1086,14 @@ function pulseWindowLabel(i){
 // pct: 0 (window just opened) → 100 (window closed). Colour shifts to amber
 // once past 70%, matching the live app's active/ending distinction.
 function ringSVG(pct, size, colorOverride){
-  const r = (size/2) - 2;
+  const sw = Math.max(2.5, size/14);
+  const r = (size/2) - sw;
   const c = 2 * Math.PI * r;
   const offset = c - (pct/100)*c;
   const color = colorOverride || (pct >= 70 ? 'var(--amber)' : 'var(--g1)');
   return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex-shrink:0;">
-    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--border2)" stroke-width="2.5"></circle>
-    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="2.5"
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="var(--border2)" stroke-width="${sw}"></circle>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${sw}"
       stroke-dasharray="${c}" stroke-dashoffset="${offset}" stroke-linecap="round"
       transform="rotate(-90 ${size/2} ${size/2})"></circle>
   </svg>`;
@@ -1454,7 +1455,7 @@ function render(){
           <div class="expanded-title">PULSE ${i+1} · ${SLOT_NAMES[i].toUpperCase()}</div>
           <div class="expanded-window-row">
             <div class="expanded-window">${pulseWindowLabel(i)}</div>
-            ${pulseRing(i, 22)}
+            ${pulseRing(i, 40)}
           </div>
         </div>
         <div class="expanded-sub">${items.length===0?'Nothing logged yet':total+'g logged'} · <b>${round1(Math.max(0,target-total))}g</b> to go for this pulse</div>
