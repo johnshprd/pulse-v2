@@ -954,7 +954,7 @@ let fillAnimateNext = false; // only animate the vessel fill rising right after 
 let lastKnownActiveSlot = null; // tracks the current active pulse so a boundary crossing can be detected live
 let lastRenderedPct = {}; // tracks each vessel's last-drawn fill % so animations start from there, not 0
 function typewriterSet(el, html, speed){
-  speed = speed || 40;
+  speed = speed || 18;
   const gen = ++coachTypeGen;
 
   // Reserve the final rendered height up front, so the bubble doesn't grow
