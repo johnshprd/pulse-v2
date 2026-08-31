@@ -953,6 +953,7 @@ function dayTotal(){ return round1(state.slots.reduce((s,_,i)=>s+slotTotal(i),0)
 let coachTypeGen = 0;
 let coachAnimateNext = false; // only teleprinter-type the coach message right after a food entry
 let fillAnimateNext = false; // only animate the vessel fill rising right after a food entry
+let lastKnownActiveSlot = null; // tracks the current active pulse so a boundary crossing can be detected live
 function typewriterSet(el, html, speed){
   speed = speed || 22;
   const gen = ++coachTypeGen;
@@ -1231,6 +1232,18 @@ async function init(){
   // actually rolls over rather than silently carrying yesterday's log forward.
   localStorage.setItem('pulse_date', new Date().toDateString());
   setInterval(checkMidnight, 60000);
+
+  // Detect crossing a pulse boundary (e.g. Lunch -> Dinner) while the app
+  // sits open, so the active/NOW pulse updates right away rather than
+  // waiting for the user to trigger some other re-render.
+  lastKnownActiveSlot = activeSlotIndex();
+  setInterval(() => {
+    const now = activeSlotIndex();
+    if (now !== lastKnownActiveSlot){
+      lastKnownActiveSlot = now;
+      render();
+    }
+  }, 15000);
 
   document.getElementById('loading').style.display = 'none';
 
