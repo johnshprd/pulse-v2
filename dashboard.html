@@ -952,6 +952,7 @@ let coachTypeGen = 0;
 let coachAnimateNext = false; // only teleprinter-type the coach message right after a food entry
 let fillAnimateNext = false; // only animate the vessel fill rising right after a food entry
 let lastKnownActiveSlot = null; // tracks the current active pulse so a boundary crossing can be detected live
+let lastRenderedPct = {}; // tracks each vessel's last-drawn fill % so animations start from there, not 0
 function typewriterSet(el, html, speed){
   speed = speed || 40;
   const gen = ++coachTypeGen;
@@ -1405,8 +1406,9 @@ function render(){
     seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'') + (pct>=45?' has-fill':'');
     const mpsStatus = getMpsState(state.slots[i]||[], i).status;
     const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
+    const startPct = fillAnimateNext ? (lastRenderedPct[i] !== undefined ? lastRenderedPct[i] : 0) : pct;
     seg.innerHTML = `
-      <div class="seg-fill" data-pct="${pct}" style="height:${fillAnimateNext?0:pct}%;">
+      <div class="seg-fill" data-pct="${pct}" style="height:${startPct}%;">
         ${pct>0?`<div class="seg-wave-wrap">
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg>
           <svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg>
@@ -1425,6 +1427,7 @@ function render(){
       </div>`;
     seg.onclick = () => pulseTapFeedback(seg, () => { expandedSlot = i; render(); });
     stripEl.appendChild(seg);
+    lastRenderedPct[i] = pct;
   }
   if (fillAnimateNext){
     fillAnimateNext = false;
