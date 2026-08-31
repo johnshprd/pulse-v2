@@ -707,6 +707,13 @@
         <img id="scanPhotoPreview" style="width:100%; height:150px; object-fit:cover; display:block; background:#e0ded4;">
       </div>
       <div id="mockItemsList"></div>
+      <label style="display:flex; align-items:center; gap:8px; font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin:2px 0 10px; cursor:pointer;">
+        <input type="checkbox" id="combineScanToggle" style="width:16px; height:16px; accent-color:var(--g1);"> Log as one combined meal instead
+      </label>
+      <div id="combineScanNameField" class="field" style="display:none;">
+        <label class="field-label">Combined meal name</label>
+        <div class="field-input"><input type="text" id="combineScanName" placeholder="e.g. Sunday roast"></div>
+      </div>
       <button class="add-missed-btn" id="addMissedItemBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">+ Add missed item</button>
       <div class="field">
         <label class="field-label">Notes for this meal <span style="font-weight:400; color:var(--muted);">(optional)</span></label>
@@ -2668,6 +2675,9 @@ function startScan(fileInputEl){
         uncertain: f.confidence === 'low',
         lowProtein: (f.proteinG || 0) < 3,
       }));
+      document.getElementById('combineScanToggle').checked = false;
+      document.getElementById('combineScanNameField').style.display = 'none';
+      document.getElementById('combineScanName').value = '';
       document.getElementById('sheetTitle').textContent = 'Confirm meal';
       renderScanItems();
       buildPulseSelect('pulseSelectScan', () => { updateScanTotal(); buildBackdateToggle('scanTimeToggle','scanTimePicker','scanTimeInput'); });
@@ -2719,15 +2729,31 @@ function updateScanTotal(){
 
 function confirmScan(){
   const mealNote = document.getElementById('scanNotes').value.trim();
-  const entries = scanItems.map(item => ({
-    name: item.name.trim() || 'Custom item',
-    icon: item.icon,
-    grams: item.grams,
-    protein: round1(item.protein),
-    id: 'scan-'+Date.now()+'-'+Math.random(),
-    p100: null,
-    note: mealNote, // one note applied to every item from this scan (private to this log, not the shared by-name notes)
-  }));
+  const combine = document.getElementById('combineScanToggle').checked;
+  let entries;
+  if (combine){
+    const suggestedName = scanItems.map(i=>i.name).filter(Boolean).join(', ');
+    const combinedName = document.getElementById('combineScanName').value.trim() || suggestedName || 'Combined meal';
+    entries = [{
+      name: combinedName,
+      icon: scanItems[0]?.icon || '🍽️',
+      grams: round1(scanItems.reduce((s,i)=>s+(i.grams||0),0)),
+      protein: round1(scanItems.reduce((s,i)=>s+(i.protein||0),0)),
+      id: 'scan-'+Date.now()+'-'+Math.random(),
+      p100: null,
+      note: mealNote,
+    }];
+  } else {
+    entries = scanItems.map(item => ({
+      name: item.name.trim() || 'Custom item',
+      icon: item.icon,
+      grams: item.grams,
+      protein: round1(item.protein),
+      id: 'scan-'+Date.now()+'-'+Math.random(),
+      p100: null,
+      note: mealNote, // one note applied to every item from this scan (private to this log, not the shared by-name notes)
+    }));
+  }
   if (!entries.length) return;
   resolveLogTime(pendingSlot, entries, 'scanTimeDecision');
 }
@@ -3094,6 +3120,14 @@ document.getElementById('confirmLogBtn').onclick = confirmLog;
 document.getElementById('confirmTypeInBtn').onclick = confirmTypeIn;
 document.getElementById('confirmScanBtn').onclick = confirmScan;
 document.getElementById('addMissedItemBtn').onclick = addMissedItem;
+document.getElementById('combineScanToggle').onchange = function(){
+  const field = document.getElementById('combineScanNameField');
+  const nameInput = document.getElementById('combineScanName');
+  field.style.display = this.checked ? 'block' : 'none';
+  if (this.checked && !nameInput.value.trim()){
+    nameInput.value = scanItems.map(i=>i.name).filter(Boolean).join(', ');
+  }
+};
 
 init();
 </script>
