@@ -264,8 +264,8 @@
 
     <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-emoji">⏱️</div>
-      <div class="onboarding-title">Three pulses a day</div>
-      <div class="onboarding-body">Your daily goal is split across 3 windows — breakfast, lunch and dinner. Log a meal and a 3-hour MPS window opens for that pulse.</div>
+      <div class="onboarding-title">Pulses, not just totals</div>
+      <div class="onboarding-body">Your daily goal is split across a few windows through the day — breakfast, lunch, dinner (and evening, if you need 4). Log a meal and a 3-hour MPS window opens for that pulse.</div>
       <div class="onboarding-pulses-demo">
         <span class="lit">P1</span><span>P2</span><span>P3</span>
       </div>
@@ -274,7 +274,7 @@
     <div class="onboarding-panel" data-panel="2">
       <div class="onboarding-emoji">🎯</div>
       <div class="onboarding-title">Set your daily goal</div>
-      <div class="onboarding-body">We'll split this evenly across your 3 pulses. You can change it any time from the GOAL button.</div>
+      <div class="onboarding-body">We'll split this evenly across your pulses. You can change it any time from the GOAL button.</div>
       <div class="onboarding-goal-hint">BETWEEN 40G AND 400G</div>
       <div class="onboarding-goal-field">
         <input type="number" id="onboardingGoalInput" inputmode="decimal" value="150">
@@ -283,10 +283,30 @@
       <div id="onboardingGoalError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px;"></div>
     </div>
 
+    <div class="onboarding-panel" data-panel="3">
+      <div class="onboarding-emoji">🏋️</div>
+      <div class="onboarding-title">Not sure? Work it out</div>
+      <div class="onboarding-body" style="margin-bottom:14px;">Optional — enter your bodyweight and aim, and we'll set your goal and pulse count for you. Skip this if you'd rather keep the number you just entered.</div>
+      <div style="width:100%; display:flex; gap:8px; margin-bottom:10px;">
+        <div class="field-input" style="flex:1; background:var(--surface);"><input type="number" id="obWeight" inputmode="decimal" placeholder="e.g. 80"></div>
+        <div class="pulse-chip active" id="obUnitKg" onclick="setObUnit('kg')">KG</div>
+        <div class="pulse-chip" id="obUnitLbs" onclick="setObUnit('lbs')">LBS</div>
+      </div>
+      <div id="obAimRow" style="width:100%; display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+        <div class="calc-option" data-mult="2.0" onclick="setObAim(this)">💪 Build muscle <span>2.0g / kg</span></div>
+        <div class="calc-option" data-mult="2.2" onclick="setObAim(this)">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
+        <div class="calc-option" data-mult="1.6" onclick="setObAim(this)">⚖️ Maintain / general health <span>1.6g / kg</span></div>
+      </div>
+      <div id="obResult" style="display:none; text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1);" id="obResultVal">—</div>
+        <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-top:2px;" id="obPulseHint"></div>
+      </div>
+    </div>
+
   </div>
   <div class="onboarding-footer">
     <div class="onboarding-dots" id="onboardingDots">
-      <span class="active"></span><span></span><span></span>
+      <span class="active"></span><span></span><span></span><span></span>
     </div>
     <button class="onboarding-btn" id="onboardingNextBtn">Next</button>
     <button class="onboarding-skip" id="onboardingSkipBtn">Skip</button>
@@ -1304,12 +1324,23 @@ async function init(){
 
 // --- First-run onboarding — shown once, only when no user_data row exists yet ---
 let onboardingStep = 0;
-const ONBOARDING_STEPS = 3;
+const ONBOARDING_STEPS = 4;
+let obUnit = 'kg';
+let obMult = null; // no aim selected until tapped
+let obComputed = null; // { weightKg, pulses, goal } once weight+aim are both set
 
 function startOnboarding(){
   onboardingStep = 0;
   document.getElementById('onboardingGoalInput').value = 150;
   document.getElementById('onboardingGoalError').textContent = '';
+  document.getElementById('obWeight').value = '';
+  obUnit = 'kg';
+  obMult = null;
+  obComputed = null;
+  document.getElementById('obUnitKg').classList.add('active');
+  document.getElementById('obUnitLbs').classList.remove('active');
+  document.querySelectorAll('#obAimRow .calc-option').forEach(o=>o.classList.remove('active'));
+  document.getElementById('obResult').style.display = 'none';
   updateOnboardingUI();
   document.getElementById('onboardingOverlay').classList.add('open');
 }
@@ -1325,9 +1356,54 @@ function updateOnboardingUI(){
     onboardingStep === ONBOARDING_STEPS - 1 ? 'Start Pulsing' : 'Next';
 }
 
+function setObUnit(u){
+  obUnit = u;
+  document.getElementById('obUnitKg').classList.toggle('active', u==='kg');
+  document.getElementById('obUnitLbs').classList.toggle('active', u==='lbs');
+  updateObCalc();
+}
+
+function setObAim(el){
+  document.querySelectorAll('#obAimRow .calc-option').forEach(o=>o.classList.remove('active'));
+  el.classList.add('active');
+  obMult = parseFloat(el.dataset.mult);
+  updateObCalc();
+}
+
+// Same threshold logic as the goal-sheet calculator: recommends whichever
+// pulse count keeps each pulse in the ~20-40g effective MPS range.
+function updateObCalc(){
+  const raw = parseFloat(document.getElementById('obWeight').value) || 0;
+  const resultBox = document.getElementById('obResult');
+  if (raw <= 0 || obMult == null){
+    resultBox.style.display = 'none';
+    obComputed = null;
+    return;
+  }
+  const kg = obUnit === 'lbs' ? raw * 0.4536 : raw;
+  let goal = Math.round(kg * obMult);
+  goal = Math.max(40, Math.min(400, goal));
+  const recommended = (goal / 3) <= 40 ? 3 : 4;
+  const perPulse = round1(goal / recommended);
+  obComputed = { weightKg: round1(kg), pulses: recommended, goal };
+  resultBox.style.display = 'block';
+  document.getElementById('obResultVal').textContent = goal + 'g';
+  document.getElementById('obPulseHint').textContent = `→ ${recommended} pulses (~${perPulse}g each)`;
+}
+document.getElementById('obWeight').oninput = updateObCalc;
+
 async function finishOnboarding(goalValue){
-  state.goal = goalValue;
-  state.slotTargets = distributeGoal(goalValue);
+  if (obComputed){
+    // Bodyweight + aim were filled in on the last panel — use that over the manual goal.
+    state.bodyWeightKg = obComputed.weightKg;
+    state.pulseCount = obComputed.pulses;
+    SLOT_NAMES = ALL_SLOT_NAMES.slice(0, state.pulseCount);
+    PULSE_COUNT = SLOT_NAMES.length;
+    state.goal = obComputed.goal;
+  } else {
+    state.goal = goalValue;
+  }
+  state.slotTargets = distributeGoal(state.goal);
   document.getElementById('onboardingOverlay').classList.remove('open');
   document.getElementById('app').style.display = 'flex';
   await saveUserData(); // creates the user_data row for this account
@@ -1335,16 +1411,23 @@ async function finishOnboarding(goalValue){
 }
 
 document.getElementById('onboardingNextBtn').onclick = () => {
+  if (onboardingStep === 2){
+    // Leaving the manual-goal panel — validate before advancing to the optional calculator step.
+    const v = parseInt(document.getElementById('onboardingGoalInput').value);
+    if (!v || v<40 || v>400){
+      document.getElementById('onboardingGoalError').textContent = 'Enter a goal between 40–400g';
+      return;
+    }
+    onboardingStep++;
+    updateOnboardingUI();
+    return;
+  }
   if (onboardingStep < ONBOARDING_STEPS - 1){
     onboardingStep++;
     updateOnboardingUI();
     return;
   }
-  const v = parseInt(document.getElementById('onboardingGoalInput').value);
-  if (!v || v<40 || v>400){
-    document.getElementById('onboardingGoalError').textContent = 'Enter a goal between 40–400g';
-    return;
-  }
+  const v = parseInt(document.getElementById('onboardingGoalInput').value) || 150;
   finishOnboarding(v);
 };
 
