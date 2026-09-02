@@ -457,6 +457,7 @@
         <div style="font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin-bottom:4px;">Suggested daily goal · applied above</div>
         <div style="font-family:'Bebas Neue',sans-serif; font-size:2.2rem; color:var(--g1);" id="calcResultVal">—</div>
         <div style="font-family:'DM Sans',sans-serif; font-size:0.74rem; color:var(--muted2); margin-top:2px;" id="calcPulseHint"></div>
+        <button id="calcPulseSwitchBtn" style="display:none; margin-top:8px; background:var(--surface2); border:1px solid var(--g1); color:var(--g1); border-radius:10px; padding:7px 14px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.76rem; cursor:pointer;" onclick="applyCalcPulseCount()"></button>
       </div>
     </div>
 
@@ -2798,12 +2799,14 @@ function updateCalcResult(){
   const raw = parseFloat(document.getElementById('calcWeight').value) || 0;
   const resultBox = document.getElementById('calcResult');
   const hintEl = document.getElementById('calcPulseHint');
+  const switchBtn = document.getElementById('calcPulseSwitchBtn');
   resultBox.style.display = 'block';
   if (raw <= 0){
     document.getElementById('calcResultVal').textContent = '—';
     document.getElementById('calcResultVal').style.fontSize = '1rem';
     document.getElementById('calcResultVal').textContent = 'Enter your weight above';
     hintEl.textContent = '';
+    switchBtn.style.display = 'none';
     return;
   }
   const kg = calcUnit === 'lbs' ? raw * 0.4536 : raw;
@@ -2815,16 +2818,32 @@ function updateCalcResult(){
   // Apply live to the main goal field too — tapping an aim updates the goal immediately
   document.getElementById('goalInput').value = suggested;
 
-  // Suggestion only — doesn't change state.pulseCount. Recommends whichever
-  // pulse count keeps each pulse in the ~20-40g effective MPS range for
-  // this suggested goal, and flags it if it differs from the current setting.
+  // Suggestion only by default — doesn't change state.pulseCount on its own.
+  // Recommends whichever pulse count keeps each pulse in the ~20-40g
+  // effective MPS range for this suggested goal, and offers a one-tap
+  // switch (via applyCalcPulseCount) if it differs from the current setting.
   const perPulse3 = suggested / 3;
   const recommended = perPulse3 <= 40 ? 3 : 4;
   const perPulseRec = round1(suggested / recommended);
   let hint = `→ ${recommended} pulses recommended at this target (~${perPulseRec}g each)`;
-  if (recommended !== state.pulseCount) hint += ` — you're currently set to ${state.pulseCount}`;
+  if (recommended !== state.pulseCount){
+    hint += ` — you're currently set to ${state.pulseCount}`;
+    calcRecommendedPulses = recommended;
+    switchBtn.textContent = `Switch to ${recommended} pulses`;
+    switchBtn.style.display = 'inline-block';
+  } else {
+    switchBtn.style.display = 'none';
+  }
   hintEl.textContent = hint;
 }
+
+let calcRecommendedPulses = null;
+async function applyCalcPulseCount(){
+  if (calcRecommendedPulses == null) return;
+  await changePulseCount(calcRecommendedPulses);
+  updateCalcResult(); // refresh hint/button now that state.pulseCount matches
+}
+
 
 document.getElementById('calcToggleBtn').onclick = () => {
   const calc = document.getElementById('goalCalculator');
