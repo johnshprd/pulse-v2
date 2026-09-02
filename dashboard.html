@@ -1529,8 +1529,7 @@ function render(){
     const pct = target>0 ? Math.min(100,(total/target)*100) : 0;
     const seg = document.createElement('div');
     seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'') + (pct>=45?' has-fill':'');
-    const mpsStatus = getMpsState(state.slots[i]||[], i).status;
-    const showNow = (mpsStatus==='active' || mpsStatus==='ending'); // only a genuinely open MPS window is "now"
+    const showNow = i === active; // same "current pulse" logic driving the glow border below — was previously based on this segment's own MPS timer, which disagreed with it whenever a finished pulse's window was still winding down
     const startPct = fillAnimateNext ? (lastRenderedPct[i] !== undefined ? lastRenderedPct[i] : 0) : pct;
     seg.innerHTML = `
       <div class="seg-fill" data-pct="${pct}" style="height:${startPct}%;">
