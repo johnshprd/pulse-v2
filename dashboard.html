@@ -3205,7 +3205,7 @@ async function estimateTypeInProtein(){
     noteEl.textContent = 'Type a food name first.';
     return;
   }
-  const grams = parseFloat(document.getElementById('typeInGrams').value) || 150;
+  const enteredGrams = parseFloat(document.getElementById('typeInGrams').value) || 150;
   const btn = document.getElementById('estimateTypeInBtn');
   const originalLabel = btn.textContent;
   btn.textContent = '✨ Estimating…';
@@ -3217,12 +3217,19 @@ async function estimateTypeInProtein(){
     const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/estimate-food', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ foodName: name, notes: notes ? `${notes} — portion is ${grams}g` : `portion is ${grams}g` })
+      body: JSON.stringify({ foodName: name, notes: notes ? `${notes} — portion is ${enteredGrams}g unless the food name itself already states a quantity (e.g. "5 slices"), in which case estimate the total grams for that stated quantity instead` : `portion is ${enteredGrams}g unless the food name itself already states a quantity (e.g. "5 slices"), in which case estimate the total grams for that stated quantity instead` })
     });
     const data = await res.json();
     if (data.error || !data.estimate) throw new Error(data.error || 'No estimate returned');
 
     const e = data.estimate;
+    // The food name itself often already states a quantity ("5 slices salami",
+    // "2 eggs") — when the AI gives us a typical/total gram figure for that,
+    // use it to correct the portion field rather than silently applying its
+    // protein-per-100g to whatever grams happened to be left in the box
+    // (which defaults to 150g and has nothing to do with what was typed).
+    const grams = e.typical != null ? e.typical : enteredGrams;
+    document.getElementById('typeInGrams').value = round1(grams);
     if (e.p100 != null){
       document.getElementById('typeInProtein').value = round1((e.p100/100) * grams);
     }
@@ -3230,8 +3237,8 @@ async function estimateTypeInProtein(){
     noteEl.style.display = 'block';
     noteEl.style.color = 'var(--muted2)';
     noteEl.textContent = e.confidence === 'low'
-      ? `⚠️ Rough guess for ${grams}g — that description was a bit vague, worth double-checking.`
-      : `✓ Estimated for your ${grams}g portion — check it and adjust if needed.`;
+      ? `⚠️ Rough guess for ${round1(grams)}g — that description was a bit vague, worth double-checking.`
+      : `✓ Estimated for ${round1(grams)}g — check it and adjust if needed.`;
   } catch(err){
     noteEl.style.display = 'block';
     noteEl.style.color = '#e5484d';
