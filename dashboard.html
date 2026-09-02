@@ -1299,13 +1299,25 @@ async function init(){
   // sits open, so the active/NOW pulse updates right away rather than
   // waiting for the user to trigger some other re-render.
   lastKnownActiveSlot = activeSlotIndex();
-  setInterval(() => {
+  function checkActiveSlotBoundary(){
     const now = activeSlotIndex();
     if (now !== lastKnownActiveSlot){
       lastKnownActiveSlot = now;
       render();
     }
-  }, 15000);
+  }
+  setInterval(checkActiveSlotBoundary, 15000);
+
+  // Mobile browsers/TWAs throttle or fully suspend setInterval while the
+  // app is backgrounded, so the 15s poll above can sit stale for however
+  // long the app was minimized. Force an immediate check the moment it's
+  // foregrounded again, so reopening the app never shows a boundary that
+  // was crossed while it was out of view.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkActiveSlotBoundary();
+  });
+  window.addEventListener('pageshow', checkActiveSlotBoundary);
+  window.addEventListener('focus', checkActiveSlotBoundary);
 
   document.getElementById('loading').style.display = 'none';
 
