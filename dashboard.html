@@ -443,8 +443,8 @@
     <button class="sheet-close" id="goalSheetClose">✕</button>
   </div>
   <div class="sheet-body">
-    <div style="font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; line-height:1.4;">
-      This is split evenly across your 3 pulses. Between 40g and 400g.
+    <div style="font-family:'DM Sans',sans-serif; font-size:0.82rem; color:var(--muted2); margin-bottom:14px; line-height:1.4;" id="goalSheetSplitText">
+      This is split evenly across your pulses. Between 40g and 400g.
     </div>
     <div class="portion-field" style="margin:0 0 6px;">
       <input type="number" id="goalInput" inputmode="decimal">
@@ -2849,6 +2849,7 @@ function openGoalSheet(){
   document.getElementById('goalInput').value = state.goal;
   document.getElementById('goalError').textContent = '';
   document.getElementById('goalCalculator').style.display = 'none';
+  document.getElementById('goalSheetSplitText').textContent = `This is split evenly across your ${PULSE_COUNT} pulses. Between 40g and 400g.`;
   if (state.bodyWeightKg) document.getElementById('calcWeight').value = state.bodyWeightKg;
   document.getElementById('goalSheetBackdrop').classList.add('open');
   document.getElementById('goalSheet').classList.add('open');
@@ -2925,6 +2926,7 @@ async function applyCalcPulseCount(){
   if (calcRecommendedPulses == null) return;
   await changePulseCount(calcRecommendedPulses);
   updateCalcResult(); // refresh hint/button now that state.pulseCount matches
+  document.getElementById('goalSheetSplitText').textContent = `This is split evenly across your ${PULSE_COUNT} pulses. Between 40g and 400g.`;
 }
 
 
