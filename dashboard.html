@@ -1089,14 +1089,22 @@ async function updateCoach(){
       const nextEmpty = pulses.find(p=>p.state==='empty');
       msg = '🚀 <strong>'+met.length+' pulses on target — brilliant!</strong> You\'ve logged <strong>'+total+'g</strong>. One more pulse of <strong>'+(nextEmpty?nextEmpty.target:lastPulse.target)+'g</strong> to finish strong.'+missedNote;
     }
-    else if (met.length===1){
+    else if (met.length>=1 && met.length<PULSE_COUNT-1){
+      // Covers any "some done, some still ahead" state — not just exactly
+      // one met. Previously only met.length===1 got this specific,
+      // next-pulse-targeted messaging; anything in between (e.g. 2 of 4)
+      // fell through to a generic "space remaining evenly" fallback below,
+      // which doesn't match how pulse targets actually work — they're fixed
+      // per-pulse doses, not a live split of whatever's left.
       const nextPulse = pulses.find(p=>p.state==='empty'); // first pulse that's genuinely still open to log
       const nextPulseRef = nextPulse ? nextPulse.name : 'your next pulse';
       const nextPulseTarget = nextPulse ? ' — aim for <strong>'+nextPulse.target+'g</strong> for '+nextPulse.name : '';
-      if (met[0].state==='closed-met'){
-        msg = '✅ <strong>'+met[0].name+' done!</strong> Ready for '+nextPulseRef+' whenever you are'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
+      const doneLabel = met.length===1 ? met[0].name+' done!' : met.length+' pulses done!';
+      const anyWindowStillOpen = met.some(p=>p.state==='active-met');
+      if (!anyWindowStillOpen){
+        msg = '✅ <strong>'+doneLabel+'</strong> Ready for '+nextPulseRef+' whenever you are'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
       } else {
-        msg = '✅ <strong>'+met[0].name+' done!</strong> Aim for your next meal in 3–4 hours'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
+        msg = '✅ <strong>'+doneLabel+'</strong> Aim for your next meal in 3–4 hours'+nextPulseTarget+'. <strong>'+(goal-total)+'g</strong> remaining today.'+missedNote;
       }
     }
     else if (hour>=20 && total<goal*0.75){
