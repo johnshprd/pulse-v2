@@ -1260,6 +1260,7 @@ let gateMode = 'signup'; // 'signup' | 'signin'
 let stripeClient = null;
 let stripeElements = null;
 let stripePaymentElementInstance = null;
+let paymentFormReady = false;
 
 function updateGateUI(){
   document.querySelectorAll('#gateOverlay .onboarding-panel').forEach(p => {
@@ -1300,6 +1301,7 @@ document.getElementById('gateGoogleBtn').onclick = async () => {
 
 async function mountStripePaymentElement(clientSecret){
   if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
+  paymentFormReady = false;
 
   // A retry after a failed attempt was mounting a second payment element
   // on top of the first. Manually clearing the container's DOM (innerHTML)
@@ -1328,6 +1330,7 @@ async function mountStripePaymentElement(clientSecret){
     10000,
     'Payment form'
   );
+  paymentFormReady = true;
 }
 
 async function beginTrialCheckout(){
@@ -1494,6 +1497,18 @@ document.getElementById('gateNextBtn').onclick = async () => {
   }
 
   if (gateStep === 2){
+    if (!paymentFormReady){
+      // The form failed to load on the previous attempt — retry loading
+      // it rather than trying to confirm a payment element that was
+      // never actually mounted (that's what produced the confusing
+      // "elements should have a mounted Payment Element" error).
+      const gateBtnRetry = document.getElementById('gateNextBtn');
+      gateBtnRetry.disabled = true; gateBtnRetry.textContent = 'Loading payment form…';
+      const ready = await beginTrialCheckout();
+      updateGateUI();
+      gateBtnRetry.disabled = false;
+      return;
+    }
     const success = await confirmTrialCheckout();
     if (success){
       document.getElementById('gateOverlay').classList.remove('open');
