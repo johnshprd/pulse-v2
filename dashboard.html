@@ -1307,20 +1307,30 @@ async function mountStripePaymentElement(clientSecret){
 async function beginTrialCheckout(){
   const errEl = document.getElementById('gatePaymentError');
   errEl.textContent = '';
-  const { data:{ session } } = await db.auth.getSession();
-  if (!session){ errEl.textContent = 'Session expired — please sign in again.'; return false; }
+  try {
+    const { data:{ session } } = await db.auth.getSession();
+    if (!session){ errEl.textContent = 'Session expired — please sign in again.'; return false; }
 
-  const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-trial-subscription', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-  });
-  const data = await res.json();
-  if (!res.ok || data.error){
-    errEl.textContent = data.error || 'Could not start your trial — try again.';
+    const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-trial-subscription', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error){
+      errEl.textContent = data.error || 'Could not start your trial — try again.';
+      return false;
+    }
+    await mountStripePaymentElement(data.clientSecret);
+    return true;
+  } catch (e) {
+    // Covers Stripe.js not finished loading, the payment element failing
+    // to mount, a dropped connection, etc. Without this, an exception here
+    // would leave the caller's await stuck forever with the button
+    // permanently disabled — this guarantees it always resolves.
+    console.error('beginTrialCheckout failed:', e);
+    errEl.textContent = 'Could not load the payment form — check your connection and try again.';
     return false;
   }
-  await mountStripePaymentElement(data.clientSecret);
-  return true;
 }
 
 async function confirmTrialCheckout(){
