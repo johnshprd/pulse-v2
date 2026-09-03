@@ -1259,6 +1259,7 @@ let gateStep = 0;
 let gateMode = 'signup'; // 'signup' | 'signin'
 let stripeClient = null;
 let stripeElements = null;
+let stripePaymentElementInstance = null;
 
 function updateGateUI(){
   document.querySelectorAll('#gateOverlay .onboarding-panel').forEach(p => {
@@ -1301,14 +1302,19 @@ async function mountStripePaymentElement(clientSecret){
   if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
 
   // A retry after a failed attempt was mounting a second payment element
-  // into the same container without clearing the first — the form would
-  // silently stay blank with no error. Clear it first every time.
-  const container = document.getElementById('stripePaymentElement');
-  container.innerHTML = '';
+  // on top of the first. Manually clearing the container's DOM (innerHTML)
+  // instead of calling Stripe's own unmount() left their SDK's internal
+  // tracking in a broken state — confirmSetup() would then fail with
+  // "elements should have a mounted Payment Element" even though the form
+  // had visually loaded fine moments earlier. Unmount properly instead.
+  if (stripePaymentElementInstance) {
+    try { stripePaymentElementInstance.unmount(); } catch (e) { /* already gone */ }
+    stripePaymentElementInstance = null;
+  }
 
   stripeElements = stripeClient.elements({ clientSecret });
-  const paymentElement = stripeElements.create('payment');
-  paymentElement.mount('#stripePaymentElement');
+  stripePaymentElementInstance = stripeElements.create('payment');
+  stripePaymentElementInstance.mount('#stripePaymentElement');
 
   // mount() returns as soon as it's called — it does NOT wait for Stripe's
   // iframe to actually finish loading and become interactive. Without
@@ -1318,7 +1324,7 @@ async function mountStripePaymentElement(clientSecret){
   // try/catch can show a real error instead of leaving grey placeholders
   // with no feedback.
   await withTimeout(
-    new Promise((resolve) => paymentElement.on('ready', resolve)),
+    new Promise((resolve) => stripePaymentElementInstance.on('ready', resolve)),
     10000,
     'Payment form'
   );
