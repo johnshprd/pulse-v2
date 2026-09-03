@@ -1383,7 +1383,7 @@ async function confirmTrialCheckout(){
     console.error('confirmSetup failed or timed out:', e);
     errEl.textContent = e.message && e.message.includes('timed out')
       ? 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.'
-      : 'Could not confirm your card — try again.';
+      : 'Could not confirm your card: ' + (e.message || e.name || 'unknown error') + ' — try again.';
     btn.disabled = false; btn.textContent = 'Start free trial';
     return false;
   }
