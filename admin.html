@@ -99,6 +99,13 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .retention-label{font-family:'DM Sans',sans-serif;font-size:0.78rem;color:var(--m2);}
 .retention-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--accent2);}
 
+/* Alerts */
+.alert-banner{background:rgba(129,140,248,0.1);border:1px solid var(--accent2);border-radius:10px;padding:12px 14px;margin-bottom:18px;}
+.alert-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;font-size:0.8rem;}
+.alert-row:not(:last-child){border-bottom:1px solid rgba(129,140,248,0.15);}
+.alert-time{font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--m2);white-space:nowrap;margin-top:2px;}
+.alert-dismiss{background:none;border:1px solid var(--b1);border-radius:6px;color:var(--m2);font-family:'Space Mono',monospace;font-size:0.55rem;padding:5px 10px;cursor:pointer;margin-top:10px;}
+
 /* Auth gate */
 #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:10;padding:20px;}
 .gate-card{width:100%;max-width:340px;}
@@ -144,6 +151,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 
   <div class="pad">
+
+    <div id="alertBanner"></div>
 
     <div class="stat-strip">
       <div class="stat"><div class="stat-label">Signups</div><div class="stat-val" id="statSignups">—</div></div>
@@ -253,6 +262,7 @@ function unlock(){
   loadStats();
   loadCustomers();
   loadGrowthTrend();
+  loadAlerts();
   loadPayments();
   initTracker();
 }
@@ -430,6 +440,7 @@ async function loadCustomers(){
             <option value="expired" ${row.status==='expired'?'selected':''}>expired</option>
           </select>
           <button onclick="setStatus('${row.email}','${row.user_id}')">Set</button>
+          <button onclick="deleteAccount('${row.email}')" style="background:var(--red);">Delete</button>
         </div>
       </td>
       <td>${row.current_period_end ? new Date(row.current_period_end).toLocaleDateString('en-GB') : '—'}</td>
@@ -443,6 +454,38 @@ async function setStatus(email, userId){
   if (error){ alert('Failed: '+error.message); return; }
   loadCustomers();
   loadStats();
+}
+
+async function deleteAccount(email){
+  const confirmed = confirm(`Permanently delete ${email}?\n\nThis removes their login, logged meals, and subscription record entirely. This cannot be undone.`);
+  if (!confirmed) return;
+  const { error } = await db.rpc('admin_delete_account', { target_email: email });
+  if (error){ alert('Failed: '+error.message); return; }
+  loadCustomers();
+  loadStats();
+}
+
+// --- Alerts ---
+async function loadAlerts(){
+  const { data, error } = await db.rpc('admin_list_alerts');
+  const el = document.getElementById('alertBanner');
+  if (error || !data){ el.innerHTML = ''; return; }
+  const unseen = data.filter(a => !a.seen);
+  if (!unseen.length){ el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div class="alert-banner">
+      ${unseen.map(a => `
+        <div class="alert-row">
+          <span>🔔 ${a.message}</span>
+          <span class="alert-time">${new Date(a.created_at).toLocaleDateString('en-GB')}</span>
+        </div>`).join('')}
+      <button class="alert-dismiss" onclick="dismissAlerts()">Mark all as seen</button>
+    </div>`;
+}
+
+async function dismissAlerts(){
+  await db.rpc('admin_mark_alerts_seen');
+  loadAlerts();
 }
 
 // --- Payment log ---
