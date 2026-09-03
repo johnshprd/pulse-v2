@@ -1396,9 +1396,12 @@ document.getElementById('gateNextBtn').onclick = async () => {
 
     gateStep = 2;
     updateGateUI();
+    const gateBtn1 = document.getElementById('gateNextBtn');
+    gateBtn1.disabled = true; gateBtn1.textContent = 'Loading payment form…';
     const ready = await beginTrialCheckout();
     if (!ready) gateStep = 1;
     updateGateUI();
+    gateBtn1.disabled = false;
     return;
   }
 
@@ -1443,7 +1446,10 @@ async function init(){
       gateStep = 2;
       updateGateUI();
       document.getElementById('gateOverlay').classList.add('open');
+      const gateBtn2 = document.getElementById('gateNextBtn');
+      gateBtn2.disabled = true; gateBtn2.textContent = 'Loading payment form…';
       const ready = await beginTrialCheckout();
+      gateBtn2.disabled = false;
       if (!ready){
         const errText = document.getElementById('gatePaymentError').textContent || '';
         if (errText.includes('Invalid session')){
