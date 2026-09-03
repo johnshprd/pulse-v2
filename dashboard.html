@@ -1308,9 +1308,11 @@ async function beginTrialCheckout(){
   const errEl = document.getElementById('gatePaymentError');
   errEl.textContent = '';
   try {
+    errEl.textContent = 'Checking your session…';
     const { data:{ session } } = await db.auth.getSession();
     if (!session){ errEl.textContent = 'Session expired — please sign in again.'; return false; }
 
+    errEl.textContent = 'Requesting your trial…';
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
     let res;
@@ -1328,7 +1330,9 @@ async function beginTrialCheckout(){
       errEl.textContent = data.error || 'Could not start your trial — try again.';
       return false;
     }
+    errEl.textContent = 'Loading card form…';
     await mountStripePaymentElement(data.clientSecret);
+    errEl.textContent = '';
     return true;
   } catch (e) {
     // Covers Stripe.js not finished loading, the payment element failing
@@ -1343,6 +1347,18 @@ async function beginTrialCheckout(){
   }
 }
 
+// Races a promise against a manual timeout. For SDK calls (like Stripe's)
+// that don't accept an AbortSignal and have no timeout of their own — if
+// the underlying call genuinely never settles, this is the only way to
+// stop the UI from waiting on it forever.
+function withTimeout(promise, ms, label){
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 async function confirmTrialCheckout(){
   const errEl = document.getElementById('gatePaymentError');
   errEl.textContent = '';
@@ -1350,12 +1366,27 @@ async function confirmTrialCheckout(){
 
   const btn = document.getElementById('gateNextBtn');
   btn.disabled = true; btn.textContent = 'Starting trial…';
+  errEl.textContent = 'Confirming your card…';
 
-  const { error } = await stripeClient.confirmSetup({
-    elements: stripeElements,
-    confirmParams: { return_url: window.location.href },
-    redirect: 'if_required',
-  });
+  let error;
+  try {
+    ({ error } = await withTimeout(
+      stripeClient.confirmSetup({
+        elements: stripeElements,
+        confirmParams: { return_url: window.location.href },
+        redirect: 'if_required',
+      }),
+      15000,
+      'Payment confirmation'
+    ));
+  } catch (e) {
+    console.error('confirmSetup failed or timed out:', e);
+    errEl.textContent = e.message && e.message.includes('timed out')
+      ? 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.'
+      : 'Could not confirm your card — try again.';
+    btn.disabled = false; btn.textContent = 'Start free trial';
+    return false;
+  }
 
   if (error){
     errEl.textContent = error.message || 'Card declined — try another card.';
