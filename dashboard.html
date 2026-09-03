@@ -1413,6 +1413,12 @@ document.getElementById('gateNextBtn').onclick = async () => {
 };
 
 async function init(){
+  const emailParam = new URLSearchParams(window.location.search).get('email');
+  if (emailParam) {
+    const gateEmailInput = document.getElementById('gateEmail');
+    if (gateEmailInput) gateEmailInput.value = emailParam;
+  }
+
   const { data:{ session } } = await db.auth.getSession();
 
   if (!session){
