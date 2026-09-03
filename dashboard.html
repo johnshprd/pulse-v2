@@ -1299,9 +1299,29 @@ document.getElementById('gateGoogleBtn').onclick = async () => {
 
 async function mountStripePaymentElement(clientSecret){
   if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
+
+  // A retry after a failed attempt was mounting a second payment element
+  // into the same container without clearing the first — the form would
+  // silently stay blank with no error. Clear it first every time.
+  const container = document.getElementById('stripePaymentElement');
+  container.innerHTML = '';
+
   stripeElements = stripeClient.elements({ clientSecret });
   const paymentElement = stripeElements.create('payment');
   paymentElement.mount('#stripePaymentElement');
+
+  // mount() returns as soon as it's called — it does NOT wait for Stripe's
+  // iframe to actually finish loading and become interactive. Without
+  // waiting for the 'ready' event, "mount() didn't throw" was being
+  // treated as success even when the real fields never rendered. This
+  // makes a load failure actually throw (via the timeout) so the caller's
+  // try/catch can show a real error instead of leaving grey placeholders
+  // with no feedback.
+  await withTimeout(
+    new Promise((resolve) => paymentElement.on('ready', resolve)),
+    10000,
+    'Payment form'
+  );
 }
 
 async function beginTrialCheckout(){
@@ -1340,9 +1360,13 @@ async function beginTrialCheckout(){
     // would leave the caller's await stuck forever with the button
     // permanently disabled — this guarantees it always resolves.
     console.error('beginTrialCheckout failed:', e);
-    errEl.textContent = e.name === 'AbortError'
-      ? 'Request timed out — your connection may be dropping the response. Try switching networks (WiFi/mobile data) and try again.'
-      : 'Could not load the payment form — check your connection and try again.';
+    if (e.name === 'AbortError') {
+      errEl.textContent = 'Request timed out — your connection may be dropping the response. Try switching networks (WiFi/mobile data) and try again.';
+    } else if (e.message && e.message.includes('Payment form timed out')) {
+      errEl.textContent = 'The card form failed to load — try again.';
+    } else {
+      errEl.textContent = 'Could not load the payment form — check your connection and try again.';
+    }
     return false;
   }
 }
