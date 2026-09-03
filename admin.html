@@ -44,19 +44,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
 .card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;}
 
-/* Play Store tracker */
-.tracker-row{display:flex;gap:10px;align-items:center;margin-bottom:14px;}
-.tracker-row label{font-family:'Space Mono',monospace;font-size:0.55rem;letter-spacing:1px;color:var(--m2);text-transform:uppercase;width:110px;flex-shrink:0;}
-.tracker-row input{background:var(--s2);border:1px solid var(--b1);border-radius:6px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;padding:8px 10px;flex:1;}
-.progress-wrap{margin-top:14px;}
-.progress-label{display:flex;justify-content:space-between;font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:var(--m2);margin-bottom:5px;text-transform:uppercase;}
-.progress-bar{height:8px;background:var(--s2);border-radius:4px;overflow:hidden;}
-.progress-fill{height:100%;background:var(--accent);transition:width 0.3s ease;}
-.progress-fill.ok{background:var(--green);}
-.tracker-verdict{margin-top:14px;padding:10px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.78rem;line-height:1.4;}
-.tracker-verdict.wait{background:rgba(245,158,11,0.1);border:1px solid var(--amber);color:var(--amber);}
-.tracker-verdict.ready{background:rgba(74,222,128,0.1);border:1px solid var(--green);color:var(--green);}
-
 /* Customer status pills */
 .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:0.5px;text-transform:uppercase;}
 .status-pill.tester{background:rgba(129,140,248,0.15);color:var(--accent2);}
@@ -160,7 +147,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 
     <div class="stat-strip">
       <div class="stat"><div class="stat-label">Signups</div><div class="stat-val" id="statSignups">—</div></div>
-      <div class="stat"><div class="stat-label">Testers</div><div class="stat-val" id="statTesters">—</div></div>
       <div class="stat"><div class="stat-label">Active</div><div class="stat-val" id="statActive">—</div></div>
     </div>
 
@@ -178,26 +164,6 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           <div class="retention-label">7-day return rate<br><span style="font-size:0.65rem;">of users who signed up 7+ days ago</span></div>
           <div class="retention-val" id="retentionVal">—</div>
         </div>
-      </div>
-    </div>
-
-    <!-- PLAY STORE TESTING TRACKER -->
-    <div class="sec">
-      <div class="sec-hdr">Play Store Testing Progress</div>
-      <div class="card">
-        <div class="tracker-row">
-          <label>Test started</label>
-          <input type="date" id="trackStart">
-        </div>
-        <div class="progress-wrap">
-          <div class="progress-label"><span id="dayLabel">Day 0 of 14</span><span id="dayPct">0%</span></div>
-          <div class="progress-bar"><div class="progress-fill" id="dayFill" style="width:0%"></div></div>
-        </div>
-        <div class="progress-wrap">
-          <div class="progress-label"><span id="testerLabel">0 of 12 testers</span><span id="testerPct">0%</span></div>
-          <div class="progress-bar"><div class="progress-fill" id="testerFill" style="width:0%"></div></div>
-        </div>
-        <div class="tracker-verdict wait" id="trackerVerdict">Set your test start date above to track progress.</div>
       </div>
     </div>
 
@@ -265,7 +231,6 @@ function unlock(){
   loadGrowthTrend();
   loadAlerts();
   loadPayments();
-  initTracker();
 }
 
 document.getElementById('gateBtn').onclick = async () => {
@@ -329,11 +294,7 @@ async function loadStats(){
   }
   const s = data[0];
   document.getElementById('statSignups').textContent = s.total_signups;
-  document.getElementById('statTesters').textContent = s.tester_count;
   document.getElementById('statActive').textContent = s.active_count;
-  // also drives the tracker's tester count
-  window.__testerCount = s.tester_count;
-  renderTracker();
 }
 
 // --- Growth trend + retention ---
@@ -363,57 +324,6 @@ async function loadGrowthTrend(){
   const { cohort_size, returned_count } = retData[0];
   retEl.textContent = Math.round((returned_count/cohort_size)*100) + '%';
   retEl.title = returned_count + ' of ' + cohort_size + ' eligible users';
-}
-
-// --- Play Store testing tracker ---
-function initTracker(){
-  const saved = localStorage.getItem('admin_track_start');
-  if (saved) document.getElementById('trackStart').value = saved;
-  document.getElementById('trackStart').addEventListener('change', (e) => {
-    localStorage.setItem('admin_track_start', e.target.value);
-    renderTracker();
-  });
-}
-
-function renderTracker(){
-  const startVal = document.getElementById('trackStart').value;
-  const testers = window.__testerCount || 0;
-  const testerPct = Math.min(100, Math.round((testers/12)*100));
-  document.getElementById('testerLabel').textContent = testers + ' of 12 testers';
-  document.getElementById('testerPct').textContent = testerPct + '%';
-  const testerFill = document.getElementById('testerFill');
-  testerFill.style.width = testerPct + '%';
-  testerFill.classList.toggle('ok', testers >= 12);
-
-  if (!startVal){
-    document.getElementById('dayLabel').textContent = 'Day 0 of 14';
-    document.getElementById('dayPct').textContent = '0%';
-    document.getElementById('dayFill').style.width = '0%';
-    document.getElementById('trackerVerdict').textContent = 'Set your test start date above to track progress.';
-    document.getElementById('trackerVerdict').className = 'tracker-verdict wait';
-    return;
-  }
-
-  const start = new Date(startVal);
-  const daysElapsed = Math.max(0, Math.floor((Date.now() - start.getTime()) / 86400000));
-  const dayPct = Math.min(100, Math.round((daysElapsed/14)*100));
-  document.getElementById('dayLabel').textContent = 'Day ' + Math.min(daysElapsed,14) + ' of 14';
-  document.getElementById('dayPct').textContent = dayPct + '%';
-  const dayFill = document.getElementById('dayFill');
-  dayFill.style.width = dayPct + '%';
-  dayFill.classList.toggle('ok', daysElapsed >= 14);
-
-  const verdictEl = document.getElementById('trackerVerdict');
-  if (daysElapsed >= 14 && testers >= 12){
-    verdictEl.textContent = '✓ Both thresholds met. Worth double-checking in Play Console that testers have stayed opted-in throughout — Google checks the full 14-day window, not just today\'s count — then you can reapply for production access.';
-    verdictEl.className = 'tracker-verdict ready';
-  } else {
-    const missing = [];
-    if (testers < 12) missing.push((12-testers)+' more tester'+(12-testers===1?'':'s'));
-    if (daysElapsed < 14) missing.push((14-daysElapsed)+' more day'+(14-daysElapsed===1?'':'s'));
-    verdictEl.textContent = 'Not yet — still need ' + missing.join(' and ') + '.';
-    verdictEl.className = 'tracker-verdict wait';
-  }
 }
 
 // --- Customers ---
