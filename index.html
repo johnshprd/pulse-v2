@@ -145,7 +145,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
       <a href="#how">How It Works</a>
       <a href="#pricing">Pricing</a>
     </nav>
-    <a href="auth.html" class="nav-cta">START FREE TRIAL</a>
+    <a href="dashboard.html" class="nav-cta">START FREE TRIAL</a>
   </div>
 </header>
 
@@ -156,7 +156,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
     <h1>Most people eat<br>enough protein.<br>Almost none eat it <em>right</em>.</h1>
     <p class="hero-sub">Daily totals don't build muscle — timing does. Pulse tracks your protein across 4 daily windows, so every gram actually counts toward growth.</p>
     <div class="hero-actions">
-      <a href="auth.html" class="btn-primary">START 7-DAY FREE TRIAL →</a>
+      <a href="dashboard.html" class="btn-primary">START 7-DAY FREE TRIAL →</a>
       <span class="hero-meta">Card required to start · Cancel anytime, free for 7 days</span>
     </div>
 
@@ -270,7 +270,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
     <div class="pt-copy">
       <h2>Start free.<br>Stay if it works.</h2>
       <p>7 days, full access, no card surprises. Cancel anytime before your trial ends and you won't be charged.</p>
-      <a href="https://buy.stripe.com/00weVf1Jj6ve1PX7SLfIs06" class="pt-link">Start your free trial →</a>
+      <a href="dashboard.html" class="pt-link">Start your free trial →</a>
       <div style="margin-top:18px;">
         <a href="#" id="testerCodeToggle" style="font-family:'Space Mono',monospace; font-size:0.72rem; letter-spacing:1px; color:var(--muted2); text-decoration:underline;">Tester? Enter your invite code</a>
       </div>
@@ -295,7 +295,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
   <div class="wrap">
     <h2>Stop guessing.<br>Start pulsing.</h2>
     <p>Every gram of protein you eat has a window to matter. Make sure it does.</p>
-    <a href="auth.html" class="btn-primary">START 7-DAY FREE TRIAL →</a>
+    <a href="dashboard.html" class="btn-primary">START 7-DAY FREE TRIAL →</a>
   </div>
 </section>
 
@@ -364,7 +364,7 @@ footer { border-top: 1px solid var(--border); padding: 32px 0; }
       const data = await res.json();
       if (res.ok && data.success){
         msgEl.style.color = 'var(--g1)';
-        msgEl.innerHTML = "You're in! <a href=\"auth.html?email=" + encodeURIComponent(email) + "\" style=\"color:var(--g1); text-decoration:underline;\">Sign in to Pulse now →</a>";
+        msgEl.innerHTML = "You're in! <a href=\"dashboard.html?email=" + encodeURIComponent(email) + "\" style=\"color:var(--g1); text-decoration:underline;\">Sign in to Pulse now →</a>";
         submitBtn.textContent = 'Redeemed';
       } else {
         msgEl.style.color = '#dc2626';
