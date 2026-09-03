@@ -1263,11 +1263,17 @@ function updateGateUI(){
   else { btn.textContent = 'Continue'; }
 }
 
+// Single place that changes gateMode, so the title and toggle label can
+// never drift out of sync with which auth call Continue actually makes.
+function setGateMode(mode){
+  gateMode = mode;
+  document.getElementById('gateAuthTitle').textContent = mode === 'signup' ? 'Create your account' : 'Sign in';
+  document.getElementById('gateToggleMode').textContent = mode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Create one";
+}
+
 document.getElementById('gateToggleMode').onclick = (e) => {
   e.preventDefault();
-  gateMode = gateMode === 'signup' ? 'signin' : 'signup';
-  document.getElementById('gateAuthTitle').textContent = gateMode === 'signup' ? 'Create your account' : 'Sign in';
-  e.target.textContent = gateMode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Create one";
+  setGateMode(gateMode === 'signup' ? 'signin' : 'signup');
   document.getElementById('gateAuthError').textContent = '';
 };
 
@@ -1391,9 +1397,8 @@ async function init(){
 
   if (!session){
     document.getElementById('loading').style.display = 'none';
-    gateStep = 0; gateMode = 'signup';
-    document.getElementById('gateAuthTitle').textContent = 'Create your account';
-    document.getElementById('gateToggleMode').textContent = 'Already have an account? Sign in';
+    gateStep = 0;
+    setGateMode('signup');
     updateGateUI();
     document.getElementById('gateOverlay').classList.add('open');
     return;
@@ -1413,7 +1418,22 @@ async function init(){
       updateGateUI();
       document.getElementById('gateOverlay').classList.add('open');
       const ready = await beginTrialCheckout();
-      if (!ready){ gateStep = 1; gateMode = 'signin'; updateGateUI(); }
+      if (!ready){
+        const errText = document.getElementById('gatePaymentError').textContent || '';
+        if (errText.includes('Invalid session')){
+          // The session token is for an account that no longer exists
+          // (e.g. deleted server-side). Retrying sign-in would only ever
+          // fail — clear the stale session and start a clean signup.
+          await db.auth.signOut();
+          currentUser = null;
+          gateStep = 0;
+          setGateMode('signup');
+        } else {
+          gateStep = 1;
+          setGateMode('signin');
+        }
+        updateGateUI();
+      }
       return;
     }
   }
