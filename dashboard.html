@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <style>
   :root{
     --bg:#f7f8fc; --surface:#ffffff; --surface2:#eeeef6;
@@ -310,6 +311,44 @@
     </div>
     <button class="onboarding-btn" id="onboardingNextBtn">Next</button>
     <button class="onboarding-skip" id="onboardingSkipBtn">Skip</button>
+  </div>
+</div>
+
+<div class="onboarding-overlay" id="gateOverlay">
+  <div class="onboarding-panels">
+
+    <div class="onboarding-panel active" data-panel="0">
+      <div class="onboarding-emoji">💪</div>
+      <div class="onboarding-title">Welcome to Pulse</div>
+      <div class="onboarding-body">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS). Every gram has a window to matter.</div>
+    </div>
+
+    <div class="onboarding-panel" data-panel="1">
+      <div class="onboarding-emoji">👤</div>
+      <div class="onboarding-title" id="gateAuthTitle">Create your account</div>
+      <div class="onboarding-body" style="margin-bottom:16px;">7 days free, full access. Cancel any time before your trial ends and you won't be charged.</div>
+      <div style="width:100%; display:flex; flex-direction:column; gap:10px;">
+        <div class="field-input" style="background:var(--surface);"><input type="email" id="gateEmail" placeholder="your@email.com" autocomplete="email"></div>
+        <div class="field-input" style="background:var(--surface);"><input type="password" id="gatePassword" placeholder="Min 8 characters" autocomplete="new-password"></div>
+      </div>
+      <div id="gateAuthError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px; margin-top:8px;"></div>
+      <a href="#" id="gateToggleMode" style="display:block; margin-top:14px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.5px; color:var(--muted2); text-decoration:underline;">Already have an account? Sign in</a>
+    </div>
+
+    <div class="onboarding-panel" data-panel="2">
+      <div class="onboarding-emoji">🔒</div>
+      <div class="onboarding-title">Start your 7-day free trial</div>
+      <div class="onboarding-body" style="margin-bottom:14px;">Then £4.99/mo. Cancel any time from your account before the trial ends and you won't be charged.</div>
+      <div id="stripePaymentElement" style="width:100%; min-height:220px;"></div>
+      <div id="gatePaymentError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px; margin-top:8px;"></div>
+    </div>
+
+  </div>
+  <div class="onboarding-footer">
+    <div class="onboarding-dots" id="gateDots">
+      <span class="active"></span><span></span><span></span>
+    </div>
+    <button class="onboarding-btn" id="gateNextBtn">Continue</button>
   </div>
 </div>
 
@@ -794,6 +833,7 @@ function slotTimeIssue(slotIdx, ts){
 }
 
 let currentUser = null;
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TecxrR6xWj9bTly3j9irx9pQ2fXSddh10LumTmUDhU3NBwR8pbP4Ku0DRxHAw78ObRnUoSyXVBUCrj89j3E2Vg400s9Z1VEXu';
 let state = {
   goal: 150,
   slotTargets: [38,38,37,37],
@@ -1202,24 +1242,186 @@ async function checkSubscription(userId) {
   return true;
 }
 
+// --- Gate: account creation + trial signup, shown inline before the app is
+// ever visible. Replaces the old behaviour of bouncing the user out to
+// index.html — everything now happens in-app, same as a normal app's
+// onboarding → signup → trial flow. ---
+let gateStep = 0;
+let gateMode = 'signup'; // 'signup' | 'signin'
+let stripeClient = null;
+let stripeElements = null;
+
+function updateGateUI(){
+  document.querySelectorAll('#gateOverlay .onboarding-panel').forEach(p => {
+    p.classList.toggle('active', Number(p.dataset.panel) === gateStep);
+  });
+  document.querySelectorAll('#gateDots span').forEach((d,i) => {
+    d.classList.toggle('active', i === gateStep);
+  });
+  const btn = document.getElementById('gateNextBtn');
+  if (gateStep === 2){ btn.textContent = 'Start free trial'; }
+  else { btn.textContent = 'Continue'; }
+}
+
+document.getElementById('gateToggleMode').onclick = (e) => {
+  e.preventDefault();
+  gateMode = gateMode === 'signup' ? 'signin' : 'signup';
+  document.getElementById('gateAuthTitle').textContent = gateMode === 'signup' ? 'Create your account' : 'Sign in';
+  e.target.textContent = gateMode === 'signup' ? 'Already have an account? Sign in' : "Don't have an account? Create one";
+  document.getElementById('gateAuthError').textContent = '';
+};
+
+async function mountStripePaymentElement(clientSecret){
+  if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
+  stripeElements = stripeClient.elements({ clientSecret });
+  const paymentElement = stripeElements.create('payment');
+  paymentElement.mount('#stripePaymentElement');
+}
+
+async function beginTrialCheckout(){
+  const errEl = document.getElementById('gatePaymentError');
+  errEl.textContent = '';
+  const { data:{ session } } = await db.auth.getSession();
+  if (!session){ errEl.textContent = 'Session expired — please sign in again.'; return false; }
+
+  const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-trial-subscription', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+  });
+  const data = await res.json();
+  if (!res.ok || data.error){
+    errEl.textContent = data.error || 'Could not start your trial — try again.';
+    return false;
+  }
+  await mountStripePaymentElement(data.clientSecret);
+  return true;
+}
+
+async function confirmTrialCheckout(){
+  const errEl = document.getElementById('gatePaymentError');
+  errEl.textContent = '';
+  if (!stripeClient || !stripeElements){ errEl.textContent = 'Payment form not ready — try again.'; return false; }
+
+  const btn = document.getElementById('gateNextBtn');
+  btn.disabled = true; btn.textContent = 'Starting trial…';
+
+  const { error } = await stripeClient.confirmSetup({
+    elements: stripeElements,
+    confirmParams: { return_url: window.location.href },
+    redirect: 'if_required',
+  });
+
+  if (error){
+    errEl.textContent = error.message || 'Card declined — try another card.';
+    btn.disabled = false; btn.textContent = 'Start free trial';
+    return false;
+  }
+
+  // The Stripe webhook flips the Supabase subscriptions row to active/
+  // trialing asynchronously — poll briefly rather than assuming it's
+  // already landed by the time confirmSetup() resolves.
+  for (let i = 0; i < 10; i++){
+    const ok = await checkSubscription(currentUser.id);
+    if (ok) return true;
+    await new Promise(r => setTimeout(r, 1200));
+  }
+  errEl.textContent = "Payment succeeded but we're still confirming your trial — pull to refresh in a moment.";
+  btn.disabled = false; btn.textContent = 'Start free trial';
+  return false;
+}
+
+document.getElementById('gateNextBtn').onclick = async () => {
+  const btn = document.getElementById('gateNextBtn');
+  if (gateStep === 0){
+    gateStep = 1;
+    updateGateUI();
+    return;
+  }
+
+  if (gateStep === 1){
+    const email = document.getElementById('gateEmail').value.trim();
+    const password = document.getElementById('gatePassword').value;
+    const errEl = document.getElementById('gateAuthError');
+    errEl.textContent = '';
+    if (!email || !password){ errEl.textContent = 'Enter your email and password.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Please wait…';
+    let result;
+    if (gateMode === 'signup'){
+      result = await db.auth.signUp({ email, password });
+    } else {
+      result = await db.auth.signInWithPassword({ email, password });
+    }
+    btn.disabled = false; btn.textContent = 'Continue';
+
+    if (result.error){ errEl.textContent = result.error.message; return; }
+    currentUser = result.data.user;
+
+    // Existing user signing back in who already has valid access — skip
+    // the trial screen entirely and drop straight into the app.
+    if (gateMode === 'signin'){
+      const hasAccess = await checkSubscription(currentUser.id);
+      if (hasAccess){
+        document.getElementById('gateOverlay').classList.remove('open');
+        await continueInitAfterGate();
+        return;
+      }
+    }
+
+    gateStep = 2;
+    updateGateUI();
+    const ready = await beginTrialCheckout();
+    if (!ready) gateStep = 1;
+    updateGateUI();
+    return;
+  }
+
+  if (gateStep === 2){
+    const success = await confirmTrialCheckout();
+    if (success){
+      document.getElementById('gateOverlay').classList.remove('open');
+      await continueInitAfterGate();
+    }
+    return;
+  }
+};
+
 async function init(){
   const { data:{ session } } = await db.auth.getSession();
-  if (!session){ window.location.href = 'auth.html'; return; }
-  currentUser = session.user;
 
+  if (!session){
+    document.getElementById('loading').style.display = 'none';
+    gateStep = 0; gateMode = 'signup';
+    document.getElementById('gateAuthTitle').textContent = 'Create your account';
+    document.getElementById('gateToggleMode').textContent = 'Already have an account? Sign in';
+    updateGateUI();
+    document.getElementById('gateOverlay').classList.add('open');
+    return;
+  }
+
+  currentUser = session.user;
   const isOwner = currentUser.email === 'johnshpd@gmail.com';
+
   if (!isOwner){
     const hasAccess = await checkSubscription(currentUser.id);
     if (!hasAccess){
-      // Sign out before redirecting — otherwise the session stays alive and
-      // every future launch just bounces straight back here again, looping.
-      const failedEmail = currentUser.email;
-      await db.auth.signOut();
-      window.location.href = 'index.html?email=' + encodeURIComponent(failedEmail) + '#pricing';
+      // Signed in already (e.g. returning after their trial lapsed) but no
+      // active access — send them straight to the trial/payment panel
+      // rather than the full welcome + signup screens again.
+      document.getElementById('loading').style.display = 'none';
+      gateStep = 2;
+      updateGateUI();
+      document.getElementById('gateOverlay').classList.add('open');
+      const ready = await beginTrialCheckout();
+      if (!ready){ gateStep = 1; gateMode = 'signin'; updateGateUI(); }
       return;
     }
   }
 
+  await continueInitAfterGate();
+}
+
+async function continueInitAfterGate(){
   const today = localDateString();
   const { data } = await db.from('user_data').select('*').eq('user_id', currentUser.id).single();
   const isNewUser = !data; // no user_data row yet — first ever launch for this account
@@ -3276,3 +3478,4 @@ init();
 </script>
 </body>
 </html>
+
