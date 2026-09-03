@@ -57,17 +57,21 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .tracker-verdict.wait{background:rgba(245,158,11,0.1);border:1px solid var(--amber);color:var(--amber);}
 .tracker-verdict.ready{background:rgba(74,222,128,0.1);border:1px solid var(--green);color:var(--green);}
 
-/* Customer table */
-.cust-table{width:100%;border-collapse:collapse;font-size:0.72rem;}
-.cust-table th{text-align:left;font-family:'Space Mono',monospace;font-size:0.45rem;letter-spacing:1px;color:var(--m2);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--b1);}
-.cust-table td{padding:8px;border-bottom:1px solid var(--b2);vertical-align:middle;word-break:break-word;}
+/* Customer status pills */
 .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:0.5px;text-transform:uppercase;}
 .status-pill.tester{background:rgba(129,140,248,0.15);color:var(--accent2);}
 .status-pill.active{background:rgba(74,222,128,0.15);color:var(--green);}
 .status-pill.cancelled,.status-pill.expired{background:rgba(248,113,113,0.15);color:var(--red);}
-.row-actions{display:flex;gap:4px;margin-top:4px;}
-.row-actions select{background:var(--s2);border:1px solid var(--b1);border-radius:5px;color:var(--text);font-size:0.65rem;padding:3px 5px;}
-.row-actions button{background:var(--accent);border:none;border-radius:5px;color:#fff;font-size:0.62rem;padding:3px 8px;cursor:pointer;}
+/* Customer cards */
+.cust-card{padding:14px 0;border-bottom:1px solid var(--b2);}
+.cust-card:last-child{border-bottom:none;}
+.cust-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;}
+.cust-email{font-family:'DM Sans',sans-serif;font-size:0.85rem;color:var(--text);word-break:break-word;flex:1;}
+.cust-renews{font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--m2);margin-bottom:10px;}
+.row-actions{display:flex;gap:8px;align-items:stretch;}
+.row-actions select{flex:1;min-width:0;background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.78rem;padding:8px 6px;}
+.row-actions button{flex-shrink:0;white-space:nowrap;background:var(--accent);border:none;border-radius:7px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:600;font-size:0.75rem;padding:8px 14px;cursor:pointer;}
+.row-actions button.danger{background:var(--red);}
 
 /* Payment log */
 .pay-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
@@ -201,10 +205,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="sec">
       <div class="sec-hdr">Customers &amp; Subscriptions</div>
       <div class="card">
-        <table class="cust-table" id="custTable">
-          <thead><tr><th>Email</th><th>Status</th><th>Renews / Expires</th></tr></thead>
-          <tbody id="custBody"><tr><td colspan="3" class="empty">Loading…</td></tr></tbody>
-        </table>
+        <div id="custBody"><div class="empty">Loading…</div></div>
       </div>
     </div>
 
@@ -420,31 +421,31 @@ async function loadCustomers(){
   const { data, error } = await db.rpc('admin_list_subscriptions');
   const body = document.getElementById('custBody');
   if (error){
-    body.innerHTML = `<tr><td colspan="3" class="empty">Couldn't load — did you run the setup SQL? (${error.message})</td></tr>`;
+    body.innerHTML = `<div class="empty">Couldn't load — did you run the setup SQL? (${error.message})</div>`;
     return;
   }
   if (!data || !data.length){
-    body.innerHTML = `<tr><td colspan="3" class="empty">No subscribers yet.</td></tr>`;
+    body.innerHTML = `<div class="empty">No subscribers yet.</div>`;
     return;
   }
   body.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.email}</td>
-      <td>
+    <div class="cust-card">
+      <div class="cust-top">
+        <div class="cust-email">${row.email}</div>
         <span class="status-pill ${row.status}">${row.status}</span>
-        <div class="row-actions">
-          <select id="sel-${row.user_id}">
-            <option value="tester" ${row.status==='tester'?'selected':''}>tester</option>
-            <option value="active" ${row.status==='active'?'selected':''}>active</option>
-            <option value="cancelled" ${row.status==='cancelled'?'selected':''}>cancelled</option>
-            <option value="expired" ${row.status==='expired'?'selected':''}>expired</option>
-          </select>
-          <button onclick="setStatus('${row.email}','${row.user_id}')">Set</button>
-          <button onclick="deleteAccount('${row.email}')" style="background:var(--red);">Delete</button>
-        </div>
-      </td>
-      <td>${row.current_period_end ? new Date(row.current_period_end).toLocaleDateString('en-GB') : '—'}</td>
-    </tr>
+      </div>
+      <div class="cust-renews">${row.current_period_end ? 'Renews/expires ' + new Date(row.current_period_end).toLocaleDateString('en-GB') : 'No renewal date'}</div>
+      <div class="row-actions">
+        <select id="sel-${row.user_id}">
+          <option value="tester" ${row.status==='tester'?'selected':''}>tester</option>
+          <option value="active" ${row.status==='active'?'selected':''}>active</option>
+          <option value="cancelled" ${row.status==='cancelled'?'selected':''}>cancelled</option>
+          <option value="expired" ${row.status==='expired'?'selected':''}>expired</option>
+        </select>
+        <button onclick="setStatus('${row.email}','${row.user_id}')">Set</button>
+        <button class="danger" onclick="deleteAccount('${row.email}')">Delete</button>
+      </div>
+    </div>
   `).join('');
 }
 
