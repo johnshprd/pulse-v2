@@ -1480,7 +1480,14 @@ document.getElementById('gateNextBtn').onclick = async () => {
     const gateBtn1 = document.getElementById('gateNextBtn');
     gateBtn1.disabled = true; gateBtn1.textContent = 'Loading payment form…';
     const ready = await beginTrialCheckout();
-    if (!ready) gateStep = 1;
+    if (!ready) {
+      // Only a genuinely invalid/expired session should force a fresh
+      // sign-in. A transient failure (card form timing out, a dropped
+      // request) shouldn't throw away a valid session and make the user
+      // redo signup — they just need to retry on this same panel.
+      const errText = document.getElementById('gatePaymentError').textContent || '';
+      if (errText.includes('Session expired')) gateStep = 1;
+    }
     updateGateUI();
     gateBtn1.disabled = false;
     return;
