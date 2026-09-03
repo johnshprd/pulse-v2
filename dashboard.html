@@ -1311,10 +1311,18 @@ async function beginTrialCheckout(){
     const { data:{ session } } = await db.auth.getSession();
     if (!session){ errEl.textContent = 'Session expired — please sign in again.'; return false; }
 
-    const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-trial-subscription', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    let res;
+    try {
+      res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-trial-subscription', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const data = await res.json();
     if (!res.ok || data.error){
       errEl.textContent = data.error || 'Could not start your trial — try again.';
@@ -1328,7 +1336,9 @@ async function beginTrialCheckout(){
     // would leave the caller's await stuck forever with the button
     // permanently disabled — this guarantees it always resolves.
     console.error('beginTrialCheckout failed:', e);
-    errEl.textContent = 'Could not load the payment form — check your connection and try again.';
+    errEl.textContent = e.name === 'AbortError'
+      ? 'Request timed out — your connection may be dropping the response. Try switching networks (WiFi/mobile data) and try again.'
+      : 'Could not load the payment form — check your connection and try again.';
     return false;
   }
 }
