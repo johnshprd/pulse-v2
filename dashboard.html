@@ -1261,6 +1261,7 @@ let stripeClient = null;
 let stripeElements = null;
 let stripePaymentElementInstance = null;
 let paymentFormReady = false;
+let currentSetupIntentSecret = null;
 
 function updateGateUI(){
   document.querySelectorAll('#gateOverlay .onboarding-panel').forEach(p => {
@@ -1302,6 +1303,7 @@ document.getElementById('gateGoogleBtn').onclick = async () => {
 async function mountStripePaymentElement(clientSecret){
   if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
   paymentFormReady = false;
+  currentSetupIntentSecret = clientSecret;
 
   // A retry after a failed attempt was mounting a second payment element
   // on top of the first. Manually clearing the container's DOM (innerHTML)
@@ -1422,9 +1424,35 @@ async function confirmTrialCheckout(){
   }
 
   if (error){
-    errEl.textContent = error.message || 'Card declined — try another card.';
-    btn.disabled = false; btn.textContent = 'Start free trial';
-    return false;
+    // "processing_error" is Stripe's generic wording for a transient
+    // client-side failure (e.g. a dropped response) — it does NOT reliably
+    // mean the confirmation failed server-side. Stripe's own guidance is to
+    // re-check the SetupIntent's actual status rather than trust this error
+    // type at face value. Every other error type (card_error, validation_error,
+    // etc.) is a genuine decline/input problem and is shown as-is.
+    if (error.type === 'processing_error' && currentSetupIntentSecret){
+      errEl.textContent = 'Confirming your card…';
+      try {
+        const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
+        if (setupIntent && setupIntent.status === 'succeeded'){
+          // It actually went through — fall through to the polling loop
+          // below instead of showing a false decline.
+        } else {
+          errEl.textContent = error.message || 'Card declined — try another card.';
+          btn.disabled = false; btn.textContent = 'Start free trial';
+          return false;
+        }
+      } catch (e) {
+        console.error('retrieveSetupIntent failed:', e);
+        errEl.textContent = error.message || 'Card declined — try another card.';
+        btn.disabled = false; btn.textContent = 'Start free trial';
+        return false;
+      }
+    } else {
+      errEl.textContent = error.message || 'Card declined — try another card.';
+      btn.disabled = false; btn.textContent = 'Start free trial';
+      return false;
+    }
   }
 
   // The Stripe webhook flips the Supabase subscriptions row to active/
