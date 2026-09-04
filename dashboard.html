@@ -1424,13 +1424,16 @@ async function confirmTrialCheckout(){
   }
 
   if (error){
-    // "processing_error" is Stripe's generic wording for a transient
-    // client-side failure (e.g. a dropped response) — it does NOT reliably
-    // mean the confirmation failed server-side. Stripe's own guidance is to
-    // re-check the SetupIntent's actual status rather than trust this error
-    // type at face value. Every other error type (card_error, validation_error,
-    // etc.) is a genuine decline/input problem and is shown as-is.
-    if (error.type === 'processing_error' && currentSetupIntentSecret){
+    // confirmSetup()'s returned error is not reliable in this flow — it has
+    // now been observed to report both 'processing_error' and
+    // 'invalid_request_error' (likely tied to the 3DS authentication step)
+    // on attempts that Stripe's webhook later confirms actually succeeded.
+    // Rather than trying to guess which specific error.type is trustworthy,
+    // always verify the real SetupIntent status before showing any error —
+    // a genuine decline/invalid-input still fails this check (status will be
+    // e.g. 'requires_payment_method', not 'succeeded'), so this can't mask
+    // an actual failure, only false negatives.
+    if (currentSetupIntentSecret){
       errEl.textContent = 'Confirming your card…';
       try {
         const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
@@ -1439,8 +1442,8 @@ async function confirmTrialCheckout(){
           // below instead of showing a false decline.
         } else {
           // TEMP DEBUG: surfaces the real SetupIntent status inline so we can
-          // see from a screenshot why the retrieve check didn't treat this as
-          // success. Remove the " [debug: ...]" suffix once confirmed working.
+          // confirm this catches every case. Remove the " [debug: ...]"
+          // suffix once confirmed working across a few more attempts.
           errEl.textContent = (error.message || 'Card declined — try another card.') +
             ' [debug: setupIntent status=' + (setupIntent ? setupIntent.status : 'null') + ']';
           btn.disabled = false; btn.textContent = 'Start free trial';
@@ -1454,14 +1457,12 @@ async function confirmTrialCheckout(){
         return false;
       }
     } else {
-      // TEMP DEBUG: shows the actual error.type when it's NOT processing_error,
-      // so we can tell whether the fix's condition is even being reached.
-      errEl.textContent = (error.message || 'Card declined — try another card.') +
-        ' [debug: error.type=' + (error.type || 'undefined') + ']';
+      errEl.textContent = error.message || 'Card declined — try another card.';
       btn.disabled = false; btn.textContent = 'Start free trial';
       return false;
     }
   }
+
 
   // The Stripe webhook flips the Supabase subscriptions row to active/
   // trialing asynchronously — poll briefly rather than assuming it's
