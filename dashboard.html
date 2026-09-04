@@ -1750,10 +1750,10 @@ async function continueInitAfterGate(){
     render();
   }
 
-  // DISABLED until the Android rebuild with fixed notification delegation ships (v12) —
-  // right now this prompt falls back to Chrome-level permission instead of the app,
-  // so it can't actually deliver pushes yet. Just flip this back on once v12 is live.
-  // subscribeToPush();
+  // Re-enabled 4 Sept 2026 — Android v12 rebuild with fixed notification
+  // delegation has shipped, so the permission prompt now correctly goes to
+  // the app rather than falling back to Chrome-level permission.
+  subscribeToPush();
 }
 
 // --- First-run onboarding — shown once, only when no user_data row exists yet ---
