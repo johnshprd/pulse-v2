@@ -1411,16 +1411,42 @@ async function confirmTrialCheckout(){
         confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
       }),
-      15000,
+      // 15s was too aggressive: a 3D Secure authentication challenge (bank
+      // app approval, SMS code entry, etc.) can legitimately take longer,
+      // and confirmSetup() doesn't resolve until it's done. Giving up early
+      // here doesn't cancel the real confirmation in progress -- it was
+      // repeatedly observed to succeed seconds later regardless.
+      45000,
       'Payment confirmation'
     ));
   } catch (e) {
     console.error('confirmSetup failed or timed out:', e);
-    errEl.textContent = e.message && e.message.includes('timed out')
-      ? 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.'
-      : 'Could not confirm your card: ' + (e.message || e.name || 'unknown error') + ' — try again.';
-    btn.disabled = false; btn.textContent = 'Start free trial';
-    return false;
+    // A timeout here doesn't necessarily mean it actually failed -- check
+    // the real SetupIntent status before giving up, same as the error-object
+    // handling below. Only show a hard failure if it genuinely isn't done.
+    if (e.message && e.message.includes('timed out') && currentSetupIntentSecret){
+      errEl.textContent = 'Still confirming your card…';
+      try {
+        const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
+        if (setupIntent && setupIntent.status === 'succeeded'){
+          error = undefined; // fall through to the polling loop below as a success
+        } else {
+          errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.' +
+            ' [debug: setupIntent status=' + (setupIntent ? setupIntent.status : 'null') + ']';
+          btn.disabled = false; btn.textContent = 'Start free trial';
+          return false;
+        }
+      } catch (e2) {
+        console.error('retrieveSetupIntent after timeout failed:', e2);
+        errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
+        btn.disabled = false; btn.textContent = 'Start free trial';
+        return false;
+      }
+    } else {
+      errEl.textContent = 'Could not confirm your card: ' + (e.message || e.name || 'unknown error') + ' — try again.';
+      btn.disabled = false; btn.textContent = 'Start free trial';
+      return false;
+    }
   }
 
   if (error){
