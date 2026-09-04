@@ -1431,8 +1431,7 @@ async function confirmTrialCheckout(){
         if (setupIntent && setupIntent.status === 'succeeded'){
           error = undefined; // fall through to the polling loop below as a success
         } else {
-          errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.' +
-            ' [debug: setupIntent status=' + (setupIntent ? setupIntent.status : 'null') + ']';
+          errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
           btn.disabled = false; btn.textContent = 'Start free trial';
           return false;
         }
@@ -1467,18 +1466,13 @@ async function confirmTrialCheckout(){
           // It actually went through — fall through to the polling loop
           // below instead of showing a false decline.
         } else {
-          // TEMP DEBUG: surfaces the real SetupIntent status inline so we can
-          // confirm this catches every case. Remove the " [debug: ...]"
-          // suffix once confirmed working across a few more attempts.
-          errEl.textContent = (error.message || 'Card declined — try another card.') +
-            ' [debug: setupIntent status=' + (setupIntent ? setupIntent.status : 'null') + ']';
+          errEl.textContent = error.message || 'Card declined — try another card.';
           btn.disabled = false; btn.textContent = 'Start free trial';
           return false;
         }
       } catch (e) {
         console.error('retrieveSetupIntent failed:', e);
-        errEl.textContent = (error.message || 'Card declined — try another card.') +
-          ' [debug: retrieve threw — ' + (e.message || e.name || 'unknown') + ']';
+        errEl.textContent = error.message || 'Card declined — try another card.';
         btn.disabled = false; btn.textContent = 'Start free trial';
         return false;
       }
