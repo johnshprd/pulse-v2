@@ -843,6 +843,14 @@ function slotTimeIssue(slotIdx, ts){
 
 let currentUser = null;
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51TecxrR6xWj9bTly3j9irx9pQ2fXSddn10LumTmUDhU3NBwR8pbP4Ku0DRxHAw78ObRnUoSyXVBUCrj89j3E2Vg400s9Z1VEXu';
+// Public half of the web-push VAPID key pair -- safe to expose client-side by
+// design (it's how the browser verifies push messages come from our server).
+// Must match the VAPID_PRIVATE_KEY secret configured on the
+// send-pulse-notification Edge Function, or push sends will fail signature
+// verification. Rotated 5 Sept 2026 -- this was previously referenced here
+// but never actually defined, so every subscribeToPush() call was silently
+// throwing a ReferenceError and no subscription was ever saved.
+const VAPID_PUBLIC_KEY = 'BHnG9tZAFT2WCTgOEV_IPTHZmwjlcGl3nnf9GZllMYYg_epBdTb7dBxa1QHzPbTWrAEuaozEs6mNVMm5jC7ppD4';
 let state = {
   goal: 150,
   slotTargets: [38,38,37,37],
