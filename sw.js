@@ -53,7 +53,7 @@ self.addEventListener('push', (event) => {
     const options = {
       body: payload.body || '',
       icon: payload.icon || '/icons/icon-192.png',
-      badge: payload.badge || '/icons/icon-192.png',
+      badge: payload.badge || '/icons/icon-badge-96.png',
       data: payload.data || { url: '/dashboard.html' },
       vibrate: [100, 50, 100],
     };
