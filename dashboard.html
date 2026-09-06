@@ -1724,18 +1724,19 @@ async function continueInitAfterGate(){
   localStorage.setItem('pulse_date', new Date().toDateString());
   setInterval(checkMidnight, 60000);
 
-  // Detect crossing a pulse boundary (e.g. Lunch -> Dinner) while the app
-  // sits open, so the active/NOW pulse updates right away rather than
-  // waiting for the user to trigger some other re-render.
+  // Keep the countdown timers and window-open/closed state fresh while the
+  // app sits open — previously this only re-rendered when the ACTIVE slot
+  // itself changed (e.g. Lunch -> Dinner), which meant the "1h 42m
+  // remaining" text and window-closed banners just sat frozen in between
+  // those boundary crossings until something else forced a redraw (the
+  // user logging food, or a manual pull-to-refresh). Now it re-renders on
+  // every poll regardless, so the UI stays live on its own.
   lastKnownActiveSlot = activeSlotIndex();
   function checkActiveSlotBoundary(){
-    const now = activeSlotIndex();
-    if (now !== lastKnownActiveSlot){
-      lastKnownActiveSlot = now;
-      render();
-    }
+    lastKnownActiveSlot = activeSlotIndex();
+    render();
   }
-  setInterval(checkActiveSlotBoundary, 15000);
+  setInterval(checkActiveSlotBoundary, 30000);
 
   // Mobile browsers/TWAs throttle or fully suspend setInterval while the
   // app is backgrounded, so the 15s poll above can sit stale for however
