@@ -318,12 +318,6 @@
   <div class="onboarding-panels">
 
     <div class="onboarding-panel active" data-panel="0">
-      <div class="onboarding-emoji">💪</div>
-      <div class="onboarding-title">Welcome to Pulse</div>
-      <div class="onboarding-body">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS). Every gram has a window to matter.</div>
-    </div>
-
-    <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-emoji">👤</div>
       <div class="onboarding-title" id="gateAuthTitle">Create your account</div>
       <div class="onboarding-body" style="margin-bottom:16px;">7 days free, full access. Cancel any time before your trial ends and you won't be charged.</div>
@@ -344,7 +338,7 @@
       <a href="#" id="gateToggleMode" style="display:block; margin-top:14px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.5px; color:var(--muted2); text-decoration:underline;">Already have an account? Sign in</a>
     </div>
 
-    <div class="onboarding-panel" data-panel="2">
+    <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-emoji">🔒</div>
       <div class="onboarding-title">Start your 7-day free trial</div>
       <div class="onboarding-body" style="margin-bottom:14px;">Then £4.99/mo. Cancel any time from your account before the trial ends and you won't be charged.</div>
@@ -355,7 +349,7 @@
   </div>
   <div class="onboarding-footer">
     <div class="onboarding-dots" id="gateDots">
-      <span class="active"></span><span></span><span></span>
+      <span class="active"></span><span></span>
     </div>
     <button class="onboarding-btn" id="gateNextBtn">Continue</button>
   </div>
@@ -1270,6 +1264,10 @@ let stripeElements = null;
 let stripePaymentElementInstance = null;
 let paymentFormReady = false;
 let currentSetupIntentSecret = null;
+// Set when the free onboarding (goal-setting etc.) completes before an
+// account exists yet (the new pre-auth flow) — tells continueInitAfterGate()
+// to persist the already-collected goal instead of running onboarding again.
+let onboardingCompletedPreAuth = false;
 
 function updateGateUI(){
   document.querySelectorAll('#gateOverlay .onboarding-panel').forEach(p => {
@@ -1279,7 +1277,7 @@ function updateGateUI(){
     d.classList.toggle('active', i === gateStep);
   });
   const btn = document.getElementById('gateNextBtn');
-  if (gateStep === 2){ btn.textContent = 'Start free trial'; }
+  if (gateStep === 1){ btn.textContent = 'Start free trial'; }
   else { btn.textContent = 'Continue'; }
 }
 
@@ -1508,12 +1506,6 @@ async function confirmTrialCheckout(){
 document.getElementById('gateNextBtn').onclick = async () => {
   const btn = document.getElementById('gateNextBtn');
   if (gateStep === 0){
-    gateStep = 1;
-    updateGateUI();
-    return;
-  }
-
-  if (gateStep === 1){
     const email = document.getElementById('gateEmail').value.trim();
     const password = document.getElementById('gatePassword').value;
     const errEl = document.getElementById('gateAuthError');
@@ -1543,7 +1535,7 @@ document.getElementById('gateNextBtn').onclick = async () => {
       }
     }
 
-    gateStep = 2;
+    gateStep = 1;
     updateGateUI();
     const gateBtn1 = document.getElementById('gateNextBtn');
     gateBtn1.disabled = true; gateBtn1.textContent = 'Loading payment form…';
@@ -1554,14 +1546,14 @@ document.getElementById('gateNextBtn').onclick = async () => {
       // request) shouldn't throw away a valid session and make the user
       // redo signup — they just need to retry on this same panel.
       const errText = document.getElementById('gatePaymentError').textContent || '';
-      if (errText.includes('Session expired')) gateStep = 1;
+      if (errText.includes('Session expired')) gateStep = 0;
     }
     updateGateUI();
     gateBtn1.disabled = false;
     return;
   }
 
-  if (gateStep === 2){
+  if (gateStep === 1){
     if (!paymentFormReady){
       // The form failed to load on the previous attempt — retry loading
       // it rather than trying to confirm a payment element that was
@@ -1593,11 +1585,18 @@ async function init(){
   const { data:{ session } } = await db.auth.getSession();
 
   if (!session){
+    // New flow (6 Sept 2026): show the free onboarding (welcome, pulses
+    // demo, goal-setting) BEFORE asking for an account or a card, instead
+    // of after. Real signups were consistently reaching the card screen
+    // and abandoning without ever attempting to submit — asking a stranger
+    // to pay before they've invested any time or personalised anything is
+    // a much weaker position than asking once they've already set their
+    // own goal and can see exactly what they'd be leaving behind.
+    // finishOnboarding() opens the account/payment gate once this is done,
+    // carrying the collected goal/pulseCount/bodyWeight forward in `state`
+    // to be saved once the account actually exists.
     document.getElementById('loading').style.display = 'none';
-    gateStep = 0;
-    setGateMode('signup');
-    updateGateUI();
-    document.getElementById('gateOverlay').classList.add('open');
+    startOnboarding();
     return;
   }
 
@@ -1611,7 +1610,7 @@ async function init(){
       // active access — send them straight to the trial/payment panel
       // rather than the full welcome + signup screens again.
       document.getElementById('loading').style.display = 'none';
-      gateStep = 2;
+      gateStep = 1;
       updateGateUI();
       document.getElementById('gateOverlay').classList.add('open');
       const gateBtn2 = document.getElementById('gateNextBtn');
@@ -1629,7 +1628,7 @@ async function init(){
           gateStep = 0;
           setGateMode('signup');
         } else {
-          gateStep = 1;
+          gateStep = 0;
           setGateMode('signin');
         }
         updateGateUI();
@@ -1751,7 +1750,16 @@ async function continueInitAfterGate(){
 
   document.getElementById('loading').style.display = 'none';
 
-  if (isNewUser){
+  if (isNewUser && onboardingCompletedPreAuth){
+    // Goal/pulseCount/bodyWeight were already collected before the account
+    // existed (new flow) — persist them now and go straight into the app.
+    await saveUserData();
+    document.getElementById('app').style.display = 'flex';
+    render();
+  } else if (isNewUser){
+    // Safety net: reached the gate as a new user without having gone
+    // through pre-auth onboarding first (shouldn't happen via the normal
+    // entry point). Falls back to the old post-auth onboarding.
     startOnboarding();
   } else {
     document.getElementById('app').style.display = 'flex';
@@ -1847,6 +1855,25 @@ async function finishOnboarding(goalValue){
   }
   state.slotTargets = distributeGoal(state.goal);
   document.getElementById('onboardingOverlay').classList.remove('open');
+
+  if (!currentUser){
+    // Pre-auth path — the new normal flow. There's no account yet to save
+    // the goal against; carry it forward in `state` and open the
+    // account/payment gate. continueInitAfterGate() persists it via
+    // saveUserData() once the account actually exists, then goes straight
+    // into the app (no second onboarding pass).
+    onboardingCompletedPreAuth = true;
+    gateStep = 0;
+    setGateMode('signup');
+    updateGateUI();
+    document.getElementById('gateOverlay').classList.add('open');
+    return;
+  }
+
+  // Fallback path: only reached if onboarding somehow runs post-auth
+  // (shouldn't happen via the normal new-user entry point, but kept as a
+  // safety net for any edge case that still calls startOnboarding() after
+  // sign-in — e.g. a user_data row that's missing for some other reason).
   document.getElementById('app').style.display = 'flex';
   await saveUserData(); // creates the user_data row for this account
   render();
