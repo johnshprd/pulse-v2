@@ -258,7 +258,7 @@
   <div class="onboarding-panels">
 
     <div class="onboarding-panel active" data-panel="0">
-      <svg width="220" height="130" viewBox="0 0 220 130" style="margin:0 auto 8px; display:block;">
+      <svg width="220" height="140" viewBox="0 0 220 140" style="margin:0 auto 8px; display:block;">
         <defs>
           <linearGradient id="mpsFillGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="var(--g1)" stop-opacity="0.28"/>
@@ -267,20 +267,33 @@
         </defs>
         <line x1="14" y1="104" x2="206" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
         <line x1="14" y1="14" x2="14" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
-        <line x1="14" y1="18" x2="206" y2="18" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3 4"/>
-        <text x="206" y="14" text-anchor="end" font-family="Space Mono, monospace" font-size="8" fill="var(--muted2)">MPS ceiling</text>
+
+        <!-- Baseline: one big meal, no re-pulsing — MPS spikes then decays back down -->
+        <path d="M14,100 C 28,96 40,26 62,22 C 78,20 92,40 108,66 C 122,88 140,98 160,100 L 206,101"
+          fill="none" stroke="var(--grey)" stroke-width="3" stroke-linecap="round" stroke-dasharray="230" stroke-dashoffset="230">
+          <animate attributeName="stroke-dashoffset" from="230" to="0" dur="1.3s" begin="0.1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+        </path>
+
+        <!-- Pulsing: each fresh window re-triggers MPS, staying elevated -->
         <path d="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18 L206,104 L14,104 Z" fill="url(#mpsFillGrad)" opacity="0">
-          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.72;1" dur="1.6s" fill="freeze"/>
+          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.75;1" dur="1.9s" fill="freeze"/>
         </path>
         <path id="mpsCurve" d="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18" fill="none" stroke="var(--g1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="280" stroke-dashoffset="280">
-          <animate attributeName="stroke-dashoffset" from="280" to="0" dur="1.4s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+          <animate attributeName="stroke-dashoffset" from="280" to="0" dur="1.4s" begin="0.5s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
         </path>
         <circle r="5" fill="#fff" stroke="var(--g1)" stroke-width="3" opacity="0">
-          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.4;1" dur="1.6s" fill="freeze"/>
-          <animateMotion dur="2.4s" begin="1.4s" repeatCount="indefinite"
+          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.4;1" dur="2s" fill="freeze"/>
+          <animateMotion dur="2.4s" begin="1.9s" repeatCount="indefinite"
             path="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18"/>
         </circle>
-        <text x="98" y="12" font-family="Space Mono, monospace" font-size="9" font-weight="700" fill="var(--g1)" opacity="0" text-anchor="middle"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.75;1" dur="1.8s" fill="freeze"/>plateaus here</text>
+
+        <!-- Legend -->
+        <g opacity="0"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.85;1" dur="2.2s" fill="freeze"/>
+          <line x1="16" y1="122" x2="32" y2="122" stroke="var(--g1)" stroke-width="4" stroke-linecap="round"/>
+          <text x="37" y="125" font-family="Space Mono, monospace" font-size="9" font-weight="700" fill="var(--g1)">Pulsing</text>
+          <line x1="108" y1="122" x2="124" y2="122" stroke="var(--grey)" stroke-width="3" stroke-linecap="round"/>
+          <text x="129" y="125" font-family="Space Mono, monospace" font-size="9" fill="var(--muted2)">One big meal</text>
+        </g>
       </svg>
       <div class="onboarding-title">Welcome to Pulse</div>
       <div class="onboarding-body">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
