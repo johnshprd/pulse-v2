@@ -258,14 +258,29 @@
   <div class="onboarding-panels">
 
     <div class="onboarding-panel active" data-panel="0">
-      <svg width="220" height="120" viewBox="0 0 220 120" style="margin:0 auto 8px; display:block;">
-        <line x1="14" y1="100" x2="206" y2="100" stroke="var(--border2)" stroke-width="1.5"/>
-        <line x1="14" y1="14" x2="14" y2="100" stroke="var(--border2)" stroke-width="1.5"/>
-        <path d="M14,96 C 34,30 58,18 90,16 C 130,14 170,14 206,14" fill="none" stroke="var(--g1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="260" stroke-dashoffset="260">
-          <animate attributeName="stroke-dashoffset" from="260" to="0" dur="1.4s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+      <svg width="220" height="130" viewBox="0 0 220 130" style="margin:0 auto 8px; display:block;">
+        <defs>
+          <linearGradient id="mpsFillGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--g1)" stop-opacity="0.28"/>
+            <stop offset="100%" stop-color="var(--g1)" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <line x1="14" y1="104" x2="206" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="14" y1="14" x2="14" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
+        <line x1="14" y1="18" x2="206" y2="18" stroke="var(--border2)" stroke-width="1" stroke-dasharray="3 4"/>
+        <text x="206" y="14" text-anchor="end" font-family="Space Mono, monospace" font-size="8" fill="var(--muted2)">MPS ceiling</text>
+        <path d="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18 L206,104 L14,104 Z" fill="url(#mpsFillGrad)" opacity="0">
+          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.72;1" dur="1.6s" fill="freeze"/>
         </path>
-        <circle cx="90" cy="16" r="4.5" fill="var(--g1)"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.6;1" dur="1.6s" fill="freeze"/></circle>
-        <text x="98" y="12" font-family="Space Mono, monospace" font-size="9" fill="var(--muted2)" opacity="0"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.7;1" dur="1.8s" fill="freeze"/>MPS plateaus</text>
+        <path id="mpsCurve" d="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18" fill="none" stroke="var(--g1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="280" stroke-dashoffset="280">
+          <animate attributeName="stroke-dashoffset" from="280" to="0" dur="1.4s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+        </path>
+        <circle r="5" fill="#fff" stroke="var(--g1)" stroke-width="3" opacity="0">
+          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.4;1" dur="1.6s" fill="freeze"/>
+          <animateMotion dur="2.4s" begin="1.4s" repeatCount="indefinite"
+            path="M14,100 C 30,94 42,20 90,18 C 130,16 170,16 206,18"/>
+        </circle>
+        <text x="98" y="12" font-family="Space Mono, monospace" font-size="9" font-weight="700" fill="var(--g1)" opacity="0" text-anchor="middle"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.75;1" dur="1.8s" fill="freeze"/>plateaus here</text>
       </svg>
       <div class="onboarding-title">Welcome to Pulse</div>
       <div class="onboarding-body">Most apps track how much protein you eat in a day. Pulse tracks <b>when</b> — because timing is what actually drives muscle protein synthesis (MPS).</div>
