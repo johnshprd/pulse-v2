@@ -267,9 +267,26 @@
       <div class="onboarding-emoji">⏱️</div>
       <div class="onboarding-title">Pulses, not just totals</div>
       <div class="onboarding-body">Your daily goal is split across a few windows through the day — breakfast, lunch, dinner (and evening, if you need 4). Log a meal and a 3-hour MPS window opens for that pulse.</div>
-      <div class="onboarding-pulses-demo">
-        <span class="lit">P1</span><span>P2</span><span>P3</span>
+      <div style="display:flex; gap:10px; margin:24px 0 6px; height:110px; align-items:flex-end;">
+        <div class="segment hit" style="border-radius:14px; height:100%; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="seg-fill" style="height:100%;">
+            <div class="seg-wave-wrap"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg></div>
+            <div class="seg-fill-body"></div>
+          </div>
+          <div class="seg-content"><div class="seg-label">P1</div><div class="seg-pct">41g ✓</div><div class="seg-target">of 41g</div></div>
+        </div>
+        <div class="segment active" style="border-radius:14px; height:100%; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="seg-fill" style="height:55%;">
+            <div class="seg-wave-wrap"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg></div>
+            <div class="seg-fill-body"></div>
+          </div>
+          <div class="seg-content"><div class="seg-label">P2 · Now</div><div class="seg-pct">22g</div><div class="seg-target">of 41g</div></div>
+        </div>
+        <div class="segment" style="border-radius:14px; height:100%; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="seg-content"><div class="seg-label">P3</div><div class="seg-pct">—</div><div class="seg-target">of 41g</div></div>
+        </div>
       </div>
+      <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); text-align:center; margin-top:4px;">This is what your day actually looks like — not just one number.</div>
     </div>
 
     <div class="onboarding-panel" data-panel="2">
