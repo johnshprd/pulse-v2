@@ -271,27 +271,28 @@
         <line x1="14" y1="104" x2="206" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
         <line x1="14" y1="14" x2="14" y2="104" stroke="var(--border2)" stroke-width="1.5"/>
 
-        <!-- 2 meals: two separate spike-decay cycles, each dropping back down between feedings -->
-        <path d="M14,100 C 30,90 45,26 62,24 C 75,22 85,40 95,58 C 108,44 122,26 138,24 C 155,22 175,55 206,100"
-          fill="none" stroke="var(--grey)" stroke-width="3" stroke-linecap="round" stroke-dasharray="280" stroke-dashoffset="280">
-          <animate attributeName="stroke-dashoffset" from="280" to="0" dur="1.5s" begin="0.1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+        <!-- 2 meals: two full spike-decay cycles, dropping deep between feedings -->
+        <path d="M14,100 C 28,90 40,24 58,22 C 72,20 86,60 100,74 C 114,60 130,26 146,24 C 165,22 185,55 206,100"
+          fill="none" stroke="var(--grey)" stroke-width="3" stroke-linecap="round" stroke-dasharray="320" stroke-dashoffset="320">
+          <animate attributeName="stroke-dashoffset" from="320" to="0" dur="1.5s" begin="0.1s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
         </path>
+        <circle cx="58" cy="22" r="3.5" fill="var(--grey)" opacity="0"><animate attributeName="opacity" to="1" begin="0.35s" dur="0.01s" fill="freeze"/></circle>
+        <circle cx="146" cy="24" r="3.5" fill="var(--grey)" opacity="0"><animate attributeName="opacity" to="1" begin="1.05s" dur="0.01s" fill="freeze"/></circle>
 
-        <!-- 4 meals: four smaller re-triggers, staying elevated throughout instead of dropping back to baseline -->
-        <path d="M14,100 C 26,80 34,22 48,20 C 58,19 66,26 74,24 C 84,22 92,18 102,17 C 112,16 120,23 128,22 C 138,21 146,17 156,16 C 166,15 174,21 182,20 C 192,19 199,17 206,17 L206,104 L14,104 Z" fill="url(#mpsFillGrad)" opacity="0">
-          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.8;1" dur="2s" fill="freeze"/>
+        <!-- 4 meals: a genuine pulse trace — four rise/dip cycles, each dip shallower than the 2-meal drop -->
+        <path d="M14,100 C 24,75 32,20 40,20 C 48,20 58,58 65,58 C 74,58 82,20 90,20 C 98,20 108,58 115,58 C 124,58 132,20 140,20 C 148,20 158,58 165,58 C 174,58 182,18 190,18 C 196,18 202,20 206,22 L206,104 L14,104 Z" fill="url(#mpsFillGrad)" opacity="0">
+          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.8;1" dur="2.8s" fill="freeze"/>
         </path>
-        <path id="mpsCurve" d="M14,100 C 26,80 34,22 48,20 C 58,19 66,26 74,24 C 84,22 92,18 102,17 C 112,16 120,23 128,22 C 138,21 146,17 156,16 C 166,15 174,21 182,20 C 192,19 199,17 206,17" fill="none" stroke="var(--g1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="330" stroke-dashoffset="330">
-          <animate attributeName="stroke-dashoffset" from="330" to="0" dur="1.6s" begin="0.6s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
+        <path id="mpsCurve" d="M14,100 C 24,75 32,20 40,20 C 48,20 58,58 65,58 C 74,58 82,20 90,20 C 98,20 108,58 115,58 C 124,58 132,20 140,20 C 148,20 158,58 165,58 C 174,58 182,18 190,18 C 196,18 202,20 206,22" fill="none" stroke="var(--g1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="420" stroke-dashoffset="420">
+          <animate attributeName="stroke-dashoffset" from="420" to="0" dur="2.2s" begin="0.5s" fill="freeze" calcMode="spline" keySplines="0.25 0.1 0.25 1"/>
         </path>
-        <circle r="5" fill="#fff" stroke="var(--g1)" stroke-width="3" opacity="0">
-          <animate attributeName="opacity" values="0;0;1" keyTimes="0;0.35;1" dur="2.2s" fill="freeze"/>
-          <animateMotion dur="2.8s" begin="2.2s" repeatCount="indefinite"
-            path="M14,100 C 26,80 34,22 48,20 C 58,19 66,26 74,24 C 84,22 92,18 102,17 C 112,16 120,23 128,22 C 138,21 146,17 156,16 C 166,15 174,21 182,20 C 192,19 199,17 206,17"/>
-        </circle>
+        <circle cx="40" cy="20" r="3.5" fill="var(--g1)" opacity="0"><animate attributeName="opacity" to="1" begin="0.9s" dur="0.01s" fill="freeze"/></circle>
+        <circle cx="90" cy="20" r="3.5" fill="var(--g1)" opacity="0"><animate attributeName="opacity" to="1" begin="1.4s" dur="0.01s" fill="freeze"/></circle>
+        <circle cx="140" cy="20" r="3.5" fill="var(--g1)" opacity="0"><animate attributeName="opacity" to="1" begin="2.0s" dur="0.01s" fill="freeze"/></circle>
+        <circle cx="190" cy="18" r="3.5" fill="var(--g1)" opacity="0"><animate attributeName="opacity" to="1" begin="2.5s" dur="0.01s" fill="freeze"/></circle>
 
         <!-- Legend -->
-        <g opacity="0"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.88;1" dur="2.4s" fill="freeze"/>
+        <g opacity="0"><animate attributeName="opacity" values="0;0;1" keyTimes="0;0.9;1" dur="3s" fill="freeze"/>
           <line x1="16" y1="122" x2="32" y2="122" stroke="var(--g1)" stroke-width="4" stroke-linecap="round"/>
           <text x="37" y="125" font-family="Space Mono, monospace" font-size="9" font-weight="700" fill="var(--g1)">4 meals</text>
           <line x1="108" y1="122" x2="124" y2="122" stroke="var(--grey)" stroke-width="3" stroke-linecap="round"/>
