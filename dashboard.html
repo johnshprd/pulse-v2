@@ -409,8 +409,8 @@
     <div class="onboarding-panel" data-panel="1">
       <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
       <div class="onboarding-kicker">Step 02 / 02</div>
-      <div class="onboarding-title">Start your 7-day free trial</div>
-      <div class="onboarding-body" style="margin-bottom:14px;">Then £4.99/mo. Cancel any time from your account before the trial ends and you won't be charged.</div>
+      <div class="onboarding-title">Your free week's up</div>
+      <div class="onboarding-body" style="margin-bottom:14px;">Add a card to keep going — £4.99/mo, cancel any time. Your data and progress are all still here.</div>
       <div id="stripePaymentElement" style="width:100%; min-height:220px;"></div>
       <div id="gatePaymentError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px; margin-top:8px;"></div>
     </div>
@@ -1314,13 +1314,25 @@ function localDateString(d){
 // Ported from v1 (johnshprd/mpspulse/app.html) — 'tester' status bypasses
 // expiry entirely for closed-testing accounts; 'active' status is checked
 // against current_period_end.
-async function checkSubscription(userId) {
+async function checkSubscription(userId, createdAt) {
   const { data, error } = await db.from('subscriptions').select('status, current_period_end').eq('user_id', userId).single();
-  if (error || !data) return false;
-  if (data.status === 'tester') return true;
-  if (data.status !== 'active') return false;
-  if (data.current_period_end) { const expiry = new Date(data.current_period_end); if (expiry < new Date()) return false; }
-  return true;
+  if (!error && data) {
+    if (data.status === 'tester') return true;
+    if (data.status === 'active') {
+      if (data.current_period_end) { const expiry = new Date(data.current_period_end); if (expiry < new Date()) return false; }
+      return true;
+    }
+  }
+  // Card-free trial (7 Sept 2026): no Stripe subscription needed to access
+  // the app for the first 7 days — every real signup was reaching the card
+  // screen and abandoning without ever attempting to submit, so payment is
+  // now only asked for once the free week has actually run out. Access is
+  // granted purely from account-creation date until then.
+  if (createdAt) {
+    const trialEnd = new Date(new Date(createdAt).getTime() + 7*24*60*60*1000);
+    if (trialEnd > new Date()) return true;
+  }
+  return false;
 }
 
 // --- Gate: account creation + trial signup, shown inline before the app is
@@ -1347,7 +1359,7 @@ function updateGateUI(){
     d.classList.toggle('active', i === gateStep);
   });
   const btn = document.getElementById('gateNextBtn');
-  if (gateStep === 1){ btn.textContent = 'Start free trial'; }
+  if (gateStep === 1){ btn.textContent = 'Subscribe'; }
   else { btn.textContent = 'Continue'; }
 }
 
@@ -1508,18 +1520,18 @@ async function confirmTrialCheckout(){
           error = undefined; // fall through to the polling loop below as a success
         } else {
           errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
-          btn.disabled = false; btn.textContent = 'Start free trial';
+          btn.disabled = false; btn.textContent = 'Subscribe';
           return false;
         }
       } catch (e2) {
         console.error('retrieveSetupIntent after timeout failed:', e2);
         errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
-        btn.disabled = false; btn.textContent = 'Start free trial';
+        btn.disabled = false; btn.textContent = 'Subscribe';
         return false;
       }
     } else {
       errEl.textContent = 'Could not confirm your card: ' + (e.message || e.name || 'unknown error') + ' — try again.';
-      btn.disabled = false; btn.textContent = 'Start free trial';
+      btn.disabled = false; btn.textContent = 'Subscribe';
       return false;
     }
   }
@@ -1543,18 +1555,18 @@ async function confirmTrialCheckout(){
           // below instead of showing a false decline.
         } else {
           errEl.textContent = error.message || 'Card declined — try another card.';
-          btn.disabled = false; btn.textContent = 'Start free trial';
+          btn.disabled = false; btn.textContent = 'Subscribe';
           return false;
         }
       } catch (e) {
         console.error('retrieveSetupIntent failed:', e);
         errEl.textContent = error.message || 'Card declined — try another card.';
-        btn.disabled = false; btn.textContent = 'Start free trial';
+        btn.disabled = false; btn.textContent = 'Subscribe';
         return false;
       }
     } else {
       errEl.textContent = error.message || 'Card declined — try another card.';
-      btn.disabled = false; btn.textContent = 'Start free trial';
+      btn.disabled = false; btn.textContent = 'Subscribe';
       return false;
     }
   }
@@ -1564,12 +1576,12 @@ async function confirmTrialCheckout(){
   // trialing asynchronously — poll briefly rather than assuming it's
   // already landed by the time confirmSetup() resolves.
   for (let i = 0; i < 10; i++){
-    const ok = await checkSubscription(currentUser.id);
+    const ok = await checkSubscription(currentUser.id, currentUser.created_at);
     if (ok) return true;
     await new Promise(r => setTimeout(r, 1200));
   }
   errEl.textContent = "Payment succeeded but we're still confirming your trial — pull to refresh in a moment.";
-  btn.disabled = false; btn.textContent = 'Start free trial';
+  btn.disabled = false; btn.textContent = 'Subscribe';
   return false;
 }
 
@@ -1594,15 +1606,17 @@ document.getElementById('gateNextBtn').onclick = async () => {
     if (result.error){ errEl.textContent = result.error.message; return; }
     currentUser = result.data.user;
 
-    // Existing user signing back in who already has valid access — skip
-    // the trial screen entirely and drop straight into the app.
-    if (gateMode === 'signin'){
-      const hasAccess = await checkSubscription(currentUser.id);
-      if (hasAccess){
-        document.getElementById('gateOverlay').classList.remove('open');
-        await continueInitAfterGate();
-        return;
-      }
+    // Card-free trial (7 Sept 2026): a brand new account is always within
+    // its own 7-day trial window (checkSubscription() grants access purely
+    // from account-creation date, no Stripe subscription needed yet), so
+    // this now covers both signup and signin — skip the payment screen
+    // entirely and go straight into the app. Payment is only ever reached
+    // here if the trial has already lapsed with nothing on file.
+    const hasAccess = await checkSubscription(currentUser.id, currentUser.created_at);
+    if (hasAccess){
+      document.getElementById('gateOverlay').classList.remove('open');
+      await continueInitAfterGate();
+      return;
     }
 
     gateStep = 1;
@@ -1674,7 +1688,7 @@ async function init(){
   const isOwner = currentUser.email === 'johnshpd@gmail.com';
 
   if (!isOwner){
-    const hasAccess = await checkSubscription(currentUser.id);
+    const hasAccess = await checkSubscription(currentUser.id, currentUser.created_at);
     if (!hasAccess){
       // Signed in already (e.g. returning after their trial lapsed) but no
       // active access — send them straight to the trial/payment panel
