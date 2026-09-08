@@ -88,6 +88,7 @@
   .segment.missed .seg-wave-front{ fill:#fbbf24; }
   @keyframes segWave{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
   @keyframes fillRise{ from{ height:0; } to{ height:var(--fill-target); } }
+  @keyframes spin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
   .seg-content{ position:relative; z-index:6; }
   .seg-label{ font-family:'DM Sans',sans-serif; font-size:0.62rem; letter-spacing:1px; color:#000; mix-blend-mode:difference; text-transform:uppercase; margin-bottom:2px; }
   .segment.active .seg-label{ font-weight:700; }
@@ -350,7 +351,7 @@
     </div>
 
     <div class="onboarding-panel" data-panel="3">
-      <div class="onboarding-emoji">⚙️</div>
+      <div class="onboarding-emoji" style="display:inline-block; animation:spin 4s linear infinite;">⚙️</div>
       <div class="onboarding-kicker">Step 04 / 04</div>
       <div class="onboarding-title">Not sure? Work it out</div>
       <div class="onboarding-body" style="margin-bottom:14px;">Optional — enter your bodyweight and aim, and we'll set your goal and pulse count for you. Skip this if you'd rather keep the number you just entered.</div>
