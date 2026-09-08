@@ -353,8 +353,12 @@
         <div class="calc-option" data-mult="1.6" onclick="setObAim(this)">⚖️ Maintain / general health <span>1.6g / kg</span></div>
       </div>
       <div id="obResult" style="display:none; text-align:center;">
-        <div style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1);" id="obResultVal">—</div>
-        <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-top:2px;" id="obPulseHint"></div>
+        <div style="display:flex; align-items:baseline; justify-content:center; gap:4px;">
+          <input type="number" id="obResultVal" inputmode="numeric" style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1); background:none; border:none; border-bottom:2px dashed var(--g1); text-align:right; width:5ch; padding:0 0 2px;">
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1);">g</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Tap the number to adjust it</div>
+        <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-top:6px;" id="obPulseHint"></div>
         <div id="obAgeNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted2); margin-top:8px; padding:10px; background:var(--surface); border-radius:8px; text-align:left; line-height:1.4;"></div>
       </div>
       <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); margin-top:16px;">Skip this and we'll start you at 150g/day — easy to adjust anytime.</div>
@@ -1911,11 +1915,27 @@ function setObAim(el){
 // larger pulses is meant to help older users clear a higher per-meal
 // threshold, not to push them over what their own body can actually use
 // in one sitting.
+function applyObGoal(goal, kg, age){
+  const ageNote = document.getElementById('obAgeNote');
+  const ceilingMult = (age && age >= 60) ? 0.8 : 0.55;
+  const ceiling = kg ? Math.round(kg * ceilingMult) : (age && age >= 60 ? 80 : 55);
+  const fitsIn3 = (goal / 3) <= ceiling;
+  const recommended = fitsIn3 ? 3 : 4;
+  const perPulse = round1(goal / recommended);
+  obComputed = { weightKg: round1(kg), age, pulses: recommended, goal };
+  document.getElementById('obPulseHint').textContent = `→ ${recommended} pulses (~${perPulse}g each)`;
+  if (age != null && age >= 60 && recommended === 3){
+    ageNote.style.display = 'block';
+    ageNote.textContent = 'Fewer, larger pulses — research suggests older adults often need more protein per meal to fully trigger muscle protein synthesis, and this still stays within what a single meal can effectively use. You can change this anytime.';
+  } else {
+    ageNote.style.display = 'none';
+  }
+}
+
 function updateObCalc(){
   const raw = parseFloat(document.getElementById('obWeight').value) || 0;
   const age = parseInt(document.getElementById('obAge').value) || null;
   const resultBox = document.getElementById('obResult');
-  const ageNote = document.getElementById('obAgeNote');
   if (raw <= 0 || obMult == null){
     resultBox.style.display = 'none';
     obComputed = null;
@@ -1925,24 +1945,22 @@ function updateObCalc(){
   let goal = Math.round(kg * obMult);
   goal = Math.max(40, Math.min(400, goal));
 
-  const ceilingMult = (age && age >= 60) ? 0.8 : 0.55;
-  const ceiling = kg ? Math.round(kg * ceilingMult) : (age && age >= 60 ? 80 : 55);
-  const fitsIn3 = (goal / 3) <= ceiling;
-  const recommended = fitsIn3 ? 3 : 4;
-  const perPulse = round1(goal / recommended);
-  obComputed = { weightKg: round1(kg), age, pulses: recommended, goal };
   resultBox.style.display = 'block';
-  document.getElementById('obResultVal').textContent = goal + 'g';
-  document.getElementById('obPulseHint').textContent = `→ ${recommended} pulses (~${perPulse}g each)`;
-  if (age != null && age >= 60 && recommended === 3){
-    ageNote.style.display = 'block';
-    ageNote.textContent = 'Fewer, larger pulses — research suggests older adults often need more protein per meal to fully trigger muscle protein synthesis, and this still stays within what a single meal can effectively use. You can change this anytime.';
-  } else {
-    ageNote.style.display = 'none';
-  }
+  document.getElementById('obResultVal').value = goal;
+  applyObGoal(goal, kg, age);
 }
 document.getElementById('obWeight').oninput = updateObCalc;
 document.getElementById('obAge').oninput = updateObCalc;
+
+// Editing the suggested number directly overrides the weight×aim
+// calculation for the goal itself, while still re-deriving pulse count
+// from the same ceiling logic against the edited figure.
+document.getElementById('obResultVal').oninput = () => {
+  if (!obComputed) return;
+  let goal = parseInt(document.getElementById('obResultVal').value);
+  if (!goal || goal < 40 || goal > 400) return;
+  applyObGoal(goal, obComputed.weightKg, obComputed.age);
+};
 
 async function finishOnboarding(goalValue){
   if (obComputed){
