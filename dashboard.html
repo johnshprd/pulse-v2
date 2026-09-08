@@ -150,7 +150,7 @@
   .onboarding-overlay.open{ display:flex; }
   .onboarding-panels{ flex:1; position:relative; overflow:hidden; }
   .onboarding-panel{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 28px; overflow-y:auto; }
-  .onboarding-panel.compact-fit{ justify-content:flex-start; padding:18px 24px 10px; }
+  .onboarding-panel.compact-fit{ justify-content:flex-start; padding:30px 24px 16px; }
   .onboarding-panel.active{ display:flex; }
   .onboarding-icon{ width:44px; height:44px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border2); border-radius:10px; background:var(--surface); color:var(--g1); }
   .onboarding-emoji{ font-size:3.4rem; margin-bottom:18px; }
@@ -338,43 +338,43 @@
     </div>
 
     <div class="onboarding-panel compact-fit" data-panel="2">
-      <div class="onboarding-kicker" style="margin-bottom:4px;">Step 03 / 03</div>
-      <div class="onboarding-title" style="font-size:1.15rem; margin-bottom:5px;">Work out your daily goal</div>
-      <div class="onboarding-body" style="font-size:0.78rem; line-height:1.35; margin-bottom:10px;">Enter your bodyweight and aim — we'll set your goal and pulse count. Change it anytime from the GOAL button.</div>
-      <div style="width:100%; display:flex; gap:6px; margin-bottom:6px;">
-        <div class="field-input" style="flex:1; background:var(--surface); padding:8px 12px;"><input type="number" id="obWeight" inputmode="decimal" placeholder="e.g. 80"></div>
-        <div class="pulse-chip active" id="obUnitKg" onclick="setObUnit('kg')" style="padding:8px 4px;">KG</div>
-        <div class="pulse-chip" id="obUnitLbs" onclick="setObUnit('lbs')" style="padding:8px 4px;">LBS</div>
+      <div class="onboarding-kicker" style="margin-bottom:10px;">Step 03 / 03</div>
+      <div class="onboarding-title" style="font-size:1.3rem; margin-bottom:12px;">Work out your daily goal</div>
+      <div class="onboarding-body" style="font-size:0.86rem; line-height:1.45; margin-bottom:22px;">Enter your bodyweight and aim — we'll set your goal and pulse count. Change it anytime from the GOAL button.</div>
+      <div style="width:100%; display:flex; gap:8px; margin-bottom:16px;">
+        <div class="field-input" style="flex:1; background:var(--surface); padding:12px 14px;"><input type="number" id="obWeight" inputmode="decimal" placeholder="e.g. 80"></div>
+        <div class="pulse-chip active" id="obUnitKg" onclick="setObUnit('kg')" style="padding:12px 6px;">KG</div>
+        <div class="pulse-chip" id="obUnitLbs" onclick="setObUnit('lbs')" style="padding:12px 6px;">LBS</div>
       </div>
-      <div class="field-input" style="width:100%; background:var(--surface); margin-bottom:6px; padding:8px 12px;"><input type="number" id="obAge" inputmode="numeric" placeholder="Age (optional)"></div>
-      <div id="obAimRow" style="width:100%; display:flex; flex-direction:column; gap:5px; margin-bottom:8px;">
-        <div class="calc-option" data-mult="2.0" onclick="setObAim(this)" style="padding:7px 11px; font-size:0.78rem;">💪 Build muscle <span>2.0g / kg</span></div>
-        <div class="calc-option" data-mult="2.2" onclick="setObAim(this)" style="padding:7px 11px; font-size:0.78rem;">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
-        <div class="calc-option" data-mult="1.6" onclick="setObAim(this)" style="padding:7px 11px; font-size:0.78rem;">⚖️ Maintain / general health <span>1.6g / kg</span></div>
+      <div class="field-input" style="width:100%; background:var(--surface); margin-bottom:16px; padding:12px 14px;"><input type="number" id="obAge" inputmode="numeric" placeholder="Age (optional)"></div>
+      <div id="obAimRow" style="width:100%; display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+        <div class="calc-option" data-mult="2.0" onclick="setObAim(this)" style="padding:12px 14px; font-size:0.86rem;">💪 Build muscle <span>2.0g / kg</span></div>
+        <div class="calc-option" data-mult="2.2" onclick="setObAim(this)" style="padding:12px 14px; font-size:0.86rem;">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
+        <div class="calc-option" data-mult="1.6" onclick="setObAim(this)" style="padding:12px 14px; font-size:0.86rem;">⚖️ Maintain / general health <span>1.6g / kg</span></div>
       </div>
       <div id="obResult" style="display:none; width:100%;">
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 4px; border-bottom:1px solid var(--border2);">
-          <span style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Daily protein</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 4px; border-bottom:1px solid var(--border2);">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Daily protein</span>
           <div style="display:flex; align-items:baseline; gap:3px;">
-            <input type="number" id="obResultVal" inputmode="numeric" style="font-family:'Bebas Neue',sans-serif; font-size:1.25rem; color:var(--g1); background:none; border:none; border-bottom:2px dashed var(--g1); text-align:right; width:4.5ch; padding:0 0 1px;">
-            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.25rem; color:var(--g1);">g</span>
+            <input type="number" id="obResultVal" inputmode="numeric" style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--g1); background:none; border:none; border-bottom:2px dashed var(--g1); text-align:right; width:4.5ch; padding:0 0 1px;">
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--g1);">g</span>
           </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 4px; border-bottom:1px solid var(--border2);">
-          <span style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Pulses</span>
-          <div style="display:flex; gap:5px;">
-            <div class="pulse-chip" id="obPulses3" onclick="setObPulseCount(3)" style="padding:4px 10px;">3</div>
-            <div class="pulse-chip" id="obPulses4" onclick="setObPulseCount(4)" style="padding:4px 10px;">4</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 4px; border-bottom:1px solid var(--border2);">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Pulses</span>
+          <div style="display:flex; gap:6px;">
+            <div class="pulse-chip" id="obPulses3" onclick="setObPulseCount(3)" style="padding:6px 12px;">3</div>
+            <div class="pulse-chip" id="obPulses4" onclick="setObPulseCount(4)" style="padding:6px 12px;">4</div>
           </div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 4px;">
-          <span style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Per pulse</span>
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.25rem; color:var(--text);" id="obPerPulseVal">—</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:13px 4px;">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Per pulse</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--text);" id="obPerPulseVal">—</span>
         </div>
-        <div style="font-family:'Space Mono',monospace; font-size:0.56rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px; margin-top:5px; text-align:center;">Tap protein or pulses to adjust</div>
-        <div id="obAgeNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.66rem; color:var(--muted2); margin-top:6px; padding:7px 8px; background:var(--surface); border-radius:8px; text-align:left; line-height:1.3;"></div>
+        <div style="font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px; margin-top:14px; text-align:center;">Tap protein or pulses to adjust</div>
+        <div id="obAgeNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted2); margin-top:16px; padding:12px 14px; background:var(--surface); border-radius:8px; text-align:left; line-height:1.4;"></div>
       </div>
-      <div style="font-family:'Space Mono',monospace; font-size:0.58rem; color:var(--muted2); margin-top:8px;">Skip this and we'll start you at 150g/day — easy to adjust anytime.</div>
+      <div style="font-family:'Space Mono',monospace; font-size:0.64rem; color:var(--muted2); margin-top:24px;">Skip this and we'll start you at 150g/day — easy to adjust anytime.</div>
     </div>
 
   </div>
