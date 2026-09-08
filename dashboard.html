@@ -351,14 +351,27 @@
         <div class="calc-option" data-mult="2.2" onclick="setObAim(this)">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
         <div class="calc-option" data-mult="1.6" onclick="setObAim(this)">⚖️ Maintain / general health <span>1.6g / kg</span></div>
       </div>
-      <div id="obResult" style="display:none; text-align:center;">
-        <div style="display:flex; align-items:baseline; justify-content:center; gap:4px;">
-          <input type="number" id="obResultVal" inputmode="numeric" style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1); background:none; border:none; border-bottom:2px dashed var(--g1); text-align:right; width:5ch; padding:0 0 2px;">
-          <span style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1);">g</span>
+      <div id="obResult" style="display:none; width:100%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 4px; border-bottom:1px solid var(--border2);">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Daily protein</span>
+          <div style="display:flex; align-items:baseline; gap:3px;">
+            <input type="number" id="obResultVal" inputmode="numeric" style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--g1); background:none; border:none; border-bottom:2px dashed var(--g1); text-align:right; width:4.5ch; padding:0 0 1px;">
+            <span style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--g1);">g</span>
+          </div>
         </div>
-        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px;">Tap the number to adjust it</div>
-        <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-top:6px;" id="obPulseHint"></div>
-        <div id="obAgeNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted2); margin-top:8px; padding:10px; background:var(--surface); border-radius:8px; text-align:left; line-height:1.4;"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 4px; border-bottom:1px solid var(--border2);">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Pulses</span>
+          <div style="display:flex; gap:6px;">
+            <div class="pulse-chip" id="obPulses3" onclick="setObPulseCount(3)">3</div>
+            <div class="pulse-chip" id="obPulses4" onclick="setObPulseCount(4)">4</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 4px;">
+          <span style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px;">Per pulse</span>
+          <span style="font-family:'Bebas Neue',sans-serif; font-size:1.5rem; color:var(--text);" id="obPerPulseVal">—</span>
+        </div>
+        <div style="font-family:'Space Mono',monospace; font-size:0.62rem; color:var(--muted2); text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; text-align:center;">Tap protein or pulses to adjust</div>
+        <div id="obAgeNote" style="display:none; font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted2); margin-top:10px; padding:10px; background:var(--surface); border-radius:8px; text-align:left; line-height:1.4;"></div>
       </div>
       <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); margin-top:16px;">Skip this and we'll start you at 150g/day — easy to adjust anytime.</div>
     </div>
@@ -1872,6 +1885,7 @@ function startOnboarding(){
   obUnit = 'kg';
   obMult = null;
   obComputed = null;
+  obPulsesManual = false;
   document.getElementById('obUnitKg').classList.add('active');
   document.getElementById('obUnitLbs').classList.remove('active');
   document.querySelectorAll('#obAimRow .calc-option').forEach(o=>o.classList.remove('active'));
@@ -1905,6 +1919,8 @@ function setObAim(el){
   updateObCalc();
 }
 
+let obPulsesManual = false; // true once the user taps a pulse-count chip directly
+
 // Uses the SAME absorption-ceiling formula as the in-app "too much"
 // warning banner (~0.55g/kg bodyweight, or 55g flat without a bodyweight
 // on file) -- previously this used a separate flat 40g cutoff, which
@@ -1916,19 +1932,33 @@ function setObAim(el){
 // in one sitting.
 function applyObGoal(goal, kg, age){
   const ageNote = document.getElementById('obAgeNote');
-  const ceilingMult = (age && age >= 60) ? 0.8 : 0.55;
-  const ceiling = kg ? Math.round(kg * ceilingMult) : (age && age >= 60 ? 80 : 55);
-  const fitsIn3 = (goal / 3) <= ceiling;
-  const recommended = fitsIn3 ? 3 : 4;
-  const perPulse = round1(goal / recommended);
-  obComputed = { weightKg: round1(kg), age, pulses: recommended, goal };
-  document.getElementById('obPulseHint').textContent = `→ ${recommended} pulses (~${perPulse}g each)`;
-  if (age != null && age >= 60 && recommended === 3){
+  let pulses;
+  if (obPulsesManual && obComputed){
+    pulses = obComputed.pulses; // respect the user's explicit chip tap
+  } else {
+    const ceilingMult = (age && age >= 60) ? 0.8 : 0.55;
+    const ceiling = kg ? Math.round(kg * ceilingMult) : (age && age >= 60 ? 80 : 55);
+    pulses = (goal / 3) <= ceiling ? 3 : 4;
+  }
+  const perPulse = round1(goal / pulses);
+  obComputed = { weightKg: round1(kg), age, pulses, goal };
+
+  document.getElementById('obPerPulseVal').textContent = perPulse + 'g';
+  document.getElementById('obPulses3').classList.toggle('active', pulses === 3);
+  document.getElementById('obPulses4').classList.toggle('active', pulses === 4);
+
+  if (age != null && age >= 60 && pulses === 3){
     ageNote.style.display = 'block';
     ageNote.textContent = 'Fewer, larger pulses — research suggests older adults often need more protein per meal to fully trigger muscle protein synthesis, and this still stays within what a single meal can effectively use. You can change this anytime.';
   } else {
     ageNote.style.display = 'none';
   }
+}
+
+function setObPulseCount(n){
+  if (!obComputed) return;
+  obPulsesManual = true;
+  applyObGoal(obComputed.goal, obComputed.weightKg, obComputed.age);
 }
 
 function updateObCalc(){
@@ -1944,6 +1974,7 @@ function updateObCalc(){
   let goal = Math.round(kg * obMult);
   goal = Math.max(40, Math.min(400, goal));
 
+  obPulsesManual = false; // a fresh weight/aim change re-derives pulses from scratch
   resultBox.style.display = 'block';
   document.getElementById('obResultVal').value = goal;
   applyObGoal(goal, kg, age);
