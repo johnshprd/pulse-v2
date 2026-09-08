@@ -323,7 +323,7 @@
             <div class="seg-fill-body"></div>
           </div>
           <div class="seg-ruler"><div class="seg-tick" style="bottom:75%;"></div><div class="seg-tick" style="bottom:50%;"></div><div class="seg-tick" style="bottom:25%;"></div></div>
-          <div class="seg-content"><div class="seg-label">P1</div><div class="seg-pct">41g ✓</div><div class="seg-target">of 41g</div></div>
+          <div class="seg-content"><div class="seg-label" id="obDemoLabel1">P1</div><div class="seg-pct">41g ✓</div><div class="seg-target">of 41g</div></div>
         </div>
         <div class="segment" style="animation:fillGlow 1.2s ease-in-out 0.9s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <div class="seg-fill" style="--fill-target:92%; animation:fillRise 1.2s ease-out forwards; animation-delay:0.9s;">
@@ -331,7 +331,7 @@
             <div class="seg-fill-body"></div>
           </div>
           <div class="seg-ruler"><div class="seg-tick" style="bottom:75%;"></div><div class="seg-tick" style="bottom:50%;"></div><div class="seg-tick" style="bottom:25%;"></div></div>
-          <div class="seg-content"><div class="seg-label">P2 · Now</div><div class="seg-pct">38g</div><div class="seg-target">of 41g</div></div>
+          <div class="seg-content"><div class="seg-label" id="obDemoLabel2">P2</div><div class="seg-pct">38g</div><div class="seg-target">of 41g</div></div>
         </div>
         <div class="segment" style="animation:fillGlow 1.2s ease-in-out 1.6s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <div class="seg-fill" style="--fill-target:37%; animation:fillRise 1.2s ease-out forwards; animation-delay:1.6s;">
@@ -339,9 +339,27 @@
             <div class="seg-fill-body"></div>
           </div>
           <div class="seg-ruler"><div class="seg-tick" style="bottom:75%;"></div><div class="seg-tick" style="bottom:50%;"></div><div class="seg-tick" style="bottom:25%;"></div></div>
-          <div class="seg-content"><div class="seg-label">P3</div><div class="seg-pct">15g</div><div class="seg-target">of 41g</div></div>
+          <div class="seg-content"><div class="seg-label" id="obDemoLabel3">P3</div><div class="seg-pct">15g</div><div class="seg-target">of 41g</div></div>
         </div>
       </div>
+      <script>
+        // Moves the "· Now" label in sync with the fillGlow/fillRise timing
+        // above (0.2s/0.9s/1.6s), so "Now" travels with the glow instead of
+        // sitting fixed on P2. Colour (hit/default class, green vs purple)
+        // is already independently correct per jar based on whether its
+        // fill actually meets target -- P1 alone hits 41/41g, so it's the
+        // only one styled "hit" (green) regardless of which one is "Now".
+        (function(){
+          var labels = ['obDemoLabel1','obDemoLabel2','obDemoLabel3'].map(function(id){ return document.getElementById(id); });
+          var base = ['P1','P2','P3'];
+          var delaysMs = [200, 900, 1600];
+          delaysMs.forEach(function(d, i){
+            setTimeout(function(){
+              labels.forEach(function(el, j){ if (el) el.textContent = base[j] + (j === i ? ' · Now' : ''); });
+            }, d);
+          });
+        })();
+      </script>
       <div style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); text-align:center; margin-top:4px;">This is what your day actually looks like — not just one number.</div>
     </div>
 
