@@ -1958,6 +1958,7 @@ function applyObGoal(goal, kg, age){
 function setObPulseCount(n){
   if (!obComputed) return;
   obPulsesManual = true;
+  obComputed.pulses = n;
   applyObGoal(obComputed.goal, obComputed.weightKg, obComputed.age);
 }
 
