@@ -1148,7 +1148,15 @@ async function updateCoach(){
     // Per-meal ceiling for max MPS stimulation is commonly cited as
     // 0.4-0.55g of protein per kg body weight (Schoenfeld & Aragon 2018).
     // Falls back to the population-average 40-55g when weight isn't known.
-    const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.55) : 55;
+    // For 60+ users, the ceiling is raised rather than left flat: a
+    // randomized crossover trial in older adults (Kramer et al.) found the
+    // anabolic response still further stimulated at 70g vs 35g in a single
+    // meal, suggesting the standard "muscle full" ceiling may not apply the
+    // same way once anabolic resistance is in play. This is based on one
+    // small trial (n=8), not a settled consensus — treated as a wider,
+    // less certain band rather than a newly-established precise ceiling.
+    const ceilingMult = (state.age && state.age >= 60) ? 0.8 : 0.55;
+    const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * ceilingMult) : (state.age && state.age >= 60 ? 80 : 55);
     const ceilingLow = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.4) : 40;
     const overPulses = pulses.filter(p=>p.total>ceiling && (p.state==='active'||p.state==='active-met'));
 
@@ -1940,7 +1948,8 @@ function updateObCalc(){
   let goal = Math.round(kg * obMult);
   goal = Math.max(40, Math.min(400, goal));
 
-  const ceiling = kg ? Math.round(kg * 0.55) : 55;
+  const ceilingMult = (age && age >= 60) ? 0.8 : 0.55;
+  const ceiling = kg ? Math.round(kg * ceilingMult) : (age && age >= 60 ? 80 : 55);
   const fitsIn3 = (goal / 3) <= ceiling;
   const recommended = fitsIn3 ? 3 : 4;
   const perPulse = round1(goal / recommended);
@@ -3491,10 +3500,12 @@ function updateCalcResult(){
 
   // Suggestion only by default — doesn't change state.pulseCount on its own.
   // Recommends whichever pulse count keeps each pulse within the real
-  // absorption ceiling (~0.55g/kg bodyweight) — the same formula the
+  // absorption ceiling (~0.55g/kg bodyweight, raised for 60+ users — see
+  // the warning banner's ceiling calc for why) — the same formula the
   // in-app "too much" warning banner uses, so this never suggests a
   // target the warning would immediately flag as too high.
-  const ceiling = kg ? Math.round(kg * 0.55) : 55;
+  const ceilingMult = (state.age && state.age >= 60) ? 0.8 : 0.55;
+  const ceiling = kg ? Math.round(kg * ceilingMult) : (state.age && state.age >= 60 ? 80 : 55);
   const recommended = (suggested / 3) <= ceiling ? 3 : 4;
   const perPulseRec = round1(suggested / recommended);
   let hint = `→ ${recommended} pulses recommended at this target (~${perPulseRec}g each)`;
