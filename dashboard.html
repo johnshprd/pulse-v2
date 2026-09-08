@@ -151,6 +151,7 @@
   .onboarding-panel{ position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 28px; }
   .onboarding-panel.active{ display:flex; }
   .onboarding-icon{ width:44px; height:44px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border2); border-radius:10px; background:var(--surface); color:var(--g1); }
+  .onboarding-emoji{ font-size:3.4rem; margin-bottom:18px; }
   .onboarding-icon svg{ width:22px; height:22px; }
   .onboarding-kicker{ font-family:'Space Mono',monospace; font-size:0.66rem; font-weight:700; letter-spacing:1.5px; color:var(--g1); text-transform:uppercase; margin-bottom:8px; }
   .onboarding-title{ font-family:'DM Sans',sans-serif; font-weight:700; font-size:1.4rem; color:var(--text); margin-bottom:12px; line-height:1.25; letter-spacing:-0.2px; }
@@ -305,7 +306,7 @@
     </div>
 
     <div class="onboarding-panel" data-panel="1">
-      <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="onboarding-emoji">⏱️</div>
       <div class="onboarding-kicker">Step 02 / 04</div>
       <div class="onboarding-title">Pulses, not just totals</div>
       <div class="onboarding-body">Your daily goal is split across a few windows through the day — breakfast, lunch, dinner (and evening, if you need 4). Log a meal and a 3-hour MPS window opens for that pulse.</div>
@@ -335,7 +336,7 @@
     </div>
 
     <div class="onboarding-panel" data-panel="2">
-      <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3.5M12 18.5V22M2 12h3.5M18.5 12H22"/></svg></div>
+      <div class="onboarding-emoji">🎯</div>
       <div class="onboarding-kicker">Step 03 / 04</div>
       <div class="onboarding-title">Set your daily goal</div>
       <div class="onboarding-body">We'll split this evenly across your pulses. You can change it any time from the GOAL button.</div>
@@ -349,7 +350,7 @@
     </div>
 
     <div class="onboarding-panel" data-panel="3">
-      <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/><circle cx="12" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+      <div class="onboarding-emoji">🏋️</div>
       <div class="onboarding-kicker">Step 04 / 04</div>
       <div class="onboarding-title">Not sure? Work it out</div>
       <div class="onboarding-body" style="margin-bottom:14px;">Optional — enter your bodyweight and aim, and we'll set your goal and pulse count for you. Skip this if you'd rather keep the number you just entered.</div>
@@ -360,9 +361,9 @@
       </div>
       <div class="field-input" style="width:100%; background:var(--surface); margin-bottom:10px;"><input type="number" id="obAge" inputmode="numeric" placeholder="Age (optional)"></div>
       <div id="obAimRow" style="width:100%; display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-        <div class="calc-option" data-mult="2.0" onclick="setObAim(this)">Build muscle <span>2.0g / kg</span></div>
-        <div class="calc-option" data-mult="2.2" onclick="setObAim(this)">Lose fat, keep muscle <span>2.2g / kg</span></div>
-        <div class="calc-option" data-mult="1.6" onclick="setObAim(this)">Maintain / general health <span>1.6g / kg</span></div>
+        <div class="calc-option" data-mult="2.0" onclick="setObAim(this)">💪 Build muscle <span>2.0g / kg</span></div>
+        <div class="calc-option" data-mult="2.2" onclick="setObAim(this)">🔥 Lose fat, keep muscle <span>2.2g / kg</span></div>
+        <div class="calc-option" data-mult="1.6" onclick="setObAim(this)">⚖️ Maintain / general health <span>1.6g / kg</span></div>
       </div>
       <div id="obResult" style="display:none; text-align:center;">
         <div style="font-family:'Bebas Neue',sans-serif; font-size:2rem; color:var(--g1);" id="obResultVal">—</div>
@@ -385,7 +386,7 @@
   <div class="onboarding-panels">
 
     <div class="onboarding-panel active" data-panel="0">
-      <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5"/></svg></div>
+      <div class="onboarding-emoji">👤</div>
       <div class="onboarding-kicker">Step 01 / 02</div>
       <div class="onboarding-title" id="gateAuthTitle">Create your account</div>
       <div class="onboarding-body" style="margin-bottom:16px;">7 days free, full access. Cancel any time before your trial ends and you won't be charged.</div>
@@ -407,7 +408,7 @@
     </div>
 
     <div class="onboarding-panel" data-panel="1">
-      <div class="onboarding-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+      <div class="onboarding-emoji">🔒</div>
       <div class="onboarding-kicker">Step 02 / 02</div>
       <div class="onboarding-title">Your free week's up</div>
       <div class="onboarding-body" style="margin-bottom:14px;">Add a card to keep going — £4.99/mo, cancel any time. Your data and progress are all still here.</div>
