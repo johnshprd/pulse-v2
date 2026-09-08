@@ -317,7 +317,7 @@
       <div class="onboarding-title">Pulses, not just totals</div>
       <div class="onboarding-body">Your daily goal is split across a few windows through the day — breakfast, lunch, dinner (and evening, if you need 4). Log a meal and a 3-hour MPS window opens for that pulse.</div>
       <div style="display:flex; gap:10px; margin:24px 0 6px;">
-        <div class="segment hit" style="animation:fillGlow 1.2s ease-in-out 0.2s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <div class="segment hit" id="obDemoSeg1" style="animation:fillGlow 1.2s ease-in-out 0.2s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <div class="seg-fill" style="--fill-target:100%; animation:fillRise 1.2s ease-out forwards; animation-delay:0.2s;">
             <div class="seg-wave-wrap"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg></div>
             <div class="seg-fill-body"></div>
@@ -325,7 +325,7 @@
           <div class="seg-ruler"><div class="seg-tick" style="bottom:75%;"></div><div class="seg-tick" style="bottom:50%;"></div><div class="seg-tick" style="bottom:25%;"></div></div>
           <div class="seg-content"><div class="seg-label" id="obDemoLabel1">P1</div><div class="seg-pct">41g ✓</div><div class="seg-target">of 41g</div></div>
         </div>
-        <div class="segment" style="animation:fillGlow 1.2s ease-in-out 0.9s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <div class="segment" id="obDemoSeg2" style="animation:fillGlow 1.2s ease-in-out 0.9s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <div class="seg-fill" style="--fill-target:92%; animation:fillRise 1.2s ease-out forwards; animation-delay:0.9s;">
             <div class="seg-wave-wrap"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg></div>
             <div class="seg-fill-body"></div>
@@ -333,7 +333,7 @@
           <div class="seg-ruler"><div class="seg-tick" style="bottom:75%;"></div><div class="seg-tick" style="bottom:50%;"></div><div class="seg-tick" style="bottom:25%;"></div></div>
           <div class="seg-content"><div class="seg-label" id="obDemoLabel2">P2</div><div class="seg-pct">38g</div><div class="seg-target">of 41g</div></div>
         </div>
-        <div class="segment" style="animation:fillGlow 1.2s ease-in-out 1.6s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <div class="segment" id="obDemoSeg3" style="animation:fillGlow 1.2s ease-in-out 1.6s 1; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <div class="seg-fill" style="--fill-target:37%; animation:fillRise 1.2s ease-out forwards; animation-delay:1.6s;">
             <div class="seg-wave-wrap"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-back" d="M0,10 C25,20 75,0 100,10 C125,20 175,0 200,10 L200,20 L0,20 Z"/></svg><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path class="seg-wave-front" d="M0,10 C25,0 75,20 100,10 C125,0 175,20 200,10 L200,20 L0,20 Z"/></svg></div>
             <div class="seg-fill-body"></div>
@@ -343,19 +343,24 @@
         </div>
       </div>
       <script>
-        // Moves the "· Now" label in sync with the fillGlow/fillRise timing
-        // above (0.2s/0.9s/1.6s), so "Now" travels with the glow instead of
-        // sitting fixed on P2. Colour (hit/default class, green vs purple)
-        // is already independently correct per jar based on whether its
-        // fill actually meets target -- P1 alone hits 41/41g, so it's the
-        // only one styled "hit" (green) regardless of which one is "Now".
+        // Moves "· Now" in sync with the fillGlow/fillRise timing above
+        // (0.2s/0.9s/1.6s). Once a jar loses "Now" to the next one, it
+        // switches to "missed" (amber) if it didn't hit target -- matching
+        // the real app: purple = currently open, green = hit, amber = closed
+        // without hitting target. P1 stays green throughout since it's the
+        // one jar that actually meets its target.
         (function(){
+          var segs = ['obDemoSeg1','obDemoSeg2','obDemoSeg3'].map(function(id){ return document.getElementById(id); });
           var labels = ['obDemoLabel1','obDemoLabel2','obDemoLabel3'].map(function(id){ return document.getElementById(id); });
           var base = ['P1','P2','P3'];
           var delaysMs = [200, 900, 1600];
           delaysMs.forEach(function(d, i){
             setTimeout(function(){
               labels.forEach(function(el, j){ if (el) el.textContent = base[j] + (j === i ? ' · Now' : ''); });
+              if (i > 0){
+                var prev = segs[i-1];
+                if (prev && !prev.classList.contains('hit')) prev.classList.add('missed');
+              }
             }, d);
           });
         })();
