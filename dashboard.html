@@ -600,7 +600,7 @@
     </div>
     <div id="goalError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; margin-bottom:12px; min-height:14px;"></div>
 
-    <button id="calcToggleBtn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">🧮 Not sure? Work it out for me</button>
+    <button id="calcToggleBtn" style="display:none; align-items:center; justify-content:center; gap:6px; border:1.5px dashed var(--border2); border-radius:12px; padding:11px; font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:1px; color:var(--muted2); text-transform:uppercase; cursor:pointer; margin-bottom:14px; width:100%; background:none;">🧮 Not sure? Work it out for me</button>
 
     <div id="goalCalculator" style="display:none; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:14px; margin-bottom:14px;">
       <div class="field">
@@ -3493,10 +3493,11 @@ function confirmScan(){
 function openGoalSheet(){
   document.getElementById('goalInput').value = state.goal;
   document.getElementById('goalError').textContent = '';
-  document.getElementById('goalCalculator').style.display = 'none';
+  document.getElementById('goalCalculator').style.display = 'block';
   document.getElementById('goalSheetSplitText').textContent = `This is split evenly across your ${PULSE_COUNT} pulses. Between 40g and 400g.`;
   if (state.bodyWeightKg) document.getElementById('calcWeight').value = state.bodyWeightKg;
   document.getElementById('calcAge').value = state.age || '';
+  updateCalcResult();
   document.getElementById('goalSheetBackdrop').classList.add('open');
   document.getElementById('goalSheet').classList.add('open');
 }
