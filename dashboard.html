@@ -2112,6 +2112,10 @@ function pulseTapFeedback(el, action){
 
 function render(){
   const active = activeSlotIndex();
+  if (lastKnownActiveForExpand !== null && active !== lastKnownActiveForExpand){
+    expandedSlot = null; // the current pulse moved on — let the glow/expanded card follow it again, instead of staying pinned to whatever was last tapped or logged
+  }
+  lastKnownActiveForExpand = active;
   const dailyTotal = round1(state.slots.reduce((sum,slot)=>sum+slot.reduce((s,i)=>s+i.protein,0),0));
   state.weekHistory[6] = dailyTotal; // today's running total always lives at index 6
 
@@ -2176,7 +2180,7 @@ function render(){
     const pct = target>0 ? Math.min(100,(total/target)*100) : 0;
     const seg = document.createElement('div');
     seg.className = 'segment' + (i===expandIdxForStrip?' active':'') + (status==='hit'?' hit':'') + (status==='missed'?' missed':'') + (pct>=45?' has-fill':'');
-    const showNow = i === active; // same "current pulse" logic driving the glow border below — was previously based on this segment's own MPS timer, which disagreed with it whenever a finished pulse's window was still winding down
+    const showNow = i === active; // the glow border below tracks expandIdxForStrip, which now resets to follow this same "active" index whenever it changes (see render()) — previously it could stay pinned to a manually-tapped/logged slot indefinitely, so the glow and this "Now" label could point at two different pulses
     const startPct = fillAnimateNext ? (lastRenderedPct[i] !== undefined ? lastRenderedPct[i] : 0) : pct;
     seg.innerHTML = `
       <div class="seg-fill" data-pct="${pct}" style="height:${startPct}%;">
@@ -2487,6 +2491,7 @@ document.getElementById('deleteEditItemBtn').onclick = deleteEditItem;
 
 // --- Add meal sheet ---
 let expandedSlot = null;
+let lastKnownActiveForExpand = null; // see render() — resets expandedSlot when the current pulse changes
 
 const ALL_STEPS = ['stepMethod','stepFavourites','stepSearch','stepTypeIn','stepAddFood','stepPortion','stepPhotoChoice','stepMealScan'];
 
