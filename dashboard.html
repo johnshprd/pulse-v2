@@ -11,7 +11,7 @@
 <script src="https://js.stripe.com/v3/"></script>
 <style>
   :root{
-    --bg:#e9e9ee; --surface:#ffffff; --surface2:#eeeef6;
+    --bg:#d7d7de; --surface:#ffffff; --surface2:#eeeef6;
     --g1:#4f46e5; --g2:#3730a3; --g3:#312e81;
     --text:#161528; --muted:#8a87a3; --muted2:#5f5c78;
     --border:#e7e6f2; --border2:#d9d7ec;
@@ -60,14 +60,14 @@
       linear-gradient(to top, rgba(0,0,0,0.22), rgba(0,0,0,0) 6px);
   }
   .segment.pressed, .collapsed-row.pressed{ transform:scale(0.90); box-shadow:0 0 0 3px rgba(79,70,229,0.45) inset, 0 0 14px rgba(79,70,229,0.35); background:rgba(79,70,229,0.14) !important; border-color:var(--g1) !important; }
-  .segment.active{ box-shadow:0 0 20px rgba(250,204,21,0.7), 0 0 40px rgba(250,204,21,0.45); animation:activeGlowPulse 2.4s ease-in-out infinite; }
+  .segment.active{ box-shadow:0 0 24px rgba(255,255,255,1), 0 0 48px rgba(255,255,255,0.85), 0 0 70px rgba(255,255,255,0.55); animation:activeGlowPulse 2.4s ease-in-out infinite; }
   @keyframes activeGlowPulse{
-    0%,100%{ box-shadow:0 0 20px rgba(250,204,21,0.7), 0 0 40px rgba(250,204,21,0.45); }
-    50%{ box-shadow:0 0 28px rgba(250,204,21,0.9), 0 0 52px rgba(250,204,21,0.6); }
+    0%,100%{ box-shadow:0 0 24px rgba(255,255,255,1), 0 0 48px rgba(255,255,255,0.85), 0 0 70px rgba(255,255,255,0.55); }
+    50%{ box-shadow:0 0 32px rgba(255,255,255,1), 0 0 60px rgba(255,255,255,1), 0 0 90px rgba(255,255,255,0.75); }
   }
   @keyframes fillGlow{
     0%,100%{ box-shadow:0 1px 3px rgba(0,0,0,0.08); }
-    30%,70%{ box-shadow:0 0 20px rgba(250,204,21,0.7), 0 0 40px rgba(250,204,21,0.45); }
+    30%,70%{ box-shadow:0 0 24px rgba(255,255,255,1), 0 0 48px rgba(255,255,255,0.85), 0 0 70px rgba(255,255,255,0.55); }
   }
   .segment.hit{ }
   .segment.missed{ }
