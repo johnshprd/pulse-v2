@@ -15,7 +15,7 @@
     --g1:#4f46e5; --g2:#3730a3; --g3:#312e81;
     --text:#161528; --muted:#8a87a3; --muted2:#5f5c78;
     --border:#e7e6f2; --border2:#d9d7ec;
-    --amber:#d97706; --green:#16a34a; --grey:#c7c5d8;
+    --amber:#d97706; --green:#0d9488; --grey:#c7c5d8;
   }
   *{box-sizing:border-box;}
   html,body{ margin:0; height:100%; background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--text); }
@@ -73,7 +73,7 @@
   .segment.missed{ }
   .seg-fill{ position:absolute; bottom:0; left:-2px; right:-2px; height:0; z-index:5; transition:height 2.2s ease; overflow:visible; }
   .seg-fill-body{ position:absolute; top:5px; left:0; right:0; bottom:-2px; background:#7c74ea; }
-  .segment.hit .seg-fill-body{ background:#4ade80; }
+  .segment.hit .seg-fill-body{ background:#14b8a6; }
   .segment.missed .seg-fill-body{ background:#fbbf24; }
   /* A slight raised lip right at the open top edge, like the rim of a
      measuring jug — a bright highlight above a thin shadow gives it a
@@ -87,7 +87,7 @@
   .seg-wave-back{ fill:var(--g1); animation:segWave 3.2s linear infinite; }
   .seg-wave-front{ fill:#7c74ea; animation:segWave 2.1s linear infinite reverse; }
   .segment.hit .seg-wave-back{ fill:var(--green); }
-  .segment.hit .seg-wave-front{ fill:#4ade80; }
+  .segment.hit .seg-wave-front{ fill:#14b8a6; }
   .segment.missed .seg-wave-back{ fill:var(--amber); }
   .segment.missed .seg-wave-front{ fill:#fbbf24; }
   @keyframes segWave{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
