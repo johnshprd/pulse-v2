@@ -614,6 +614,10 @@
         </div>
       </div>
       <div class="field">
+        <label class="field-label">Your age (optional)</label>
+        <div class="field-input" style="background:var(--surface);"><input type="number" id="calcAge" inputmode="numeric" placeholder="e.g. 65"></div>
+      </div>
+      <div class="field">
         <label class="field-label">Your main aim</label>
         <div style="display:flex; flex-direction:column; gap:6px;" id="calcAimRow">
           <div class="calc-option active" data-mult="2.0" onclick="setCalcAim(this)">💪 Build muscle <span>2.0g / kg</span></div>
@@ -3492,6 +3496,7 @@ function openGoalSheet(){
   document.getElementById('goalCalculator').style.display = 'none';
   document.getElementById('goalSheetSplitText').textContent = `This is split evenly across your ${PULSE_COUNT} pulses. Between 40g and 400g.`;
   if (state.bodyWeightKg) document.getElementById('calcWeight').value = state.bodyWeightKg;
+  document.getElementById('calcAge').value = state.age || '';
   document.getElementById('goalSheetBackdrop').classList.add('open');
   document.getElementById('goalSheet').classList.add('open');
 }
@@ -3526,6 +3531,10 @@ function updateCalcResult(){
   const hintEl = document.getElementById('calcPulseHint');
   const switchBtn = document.getElementById('calcPulseSwitchBtn');
   resultBox.style.display = 'block';
+  // Captured before the weight guard below, so age is saved even if
+  // someone only fills this in without also entering a bodyweight.
+  const ageRaw = parseInt(document.getElementById('calcAge').value);
+  state.age = ageRaw || null;
   if (raw <= 0){
     document.getElementById('calcResultVal').textContent = '—';
     document.getElementById('calcResultVal').style.fontSize = '1rem';
@@ -3581,6 +3590,7 @@ document.getElementById('calcToggleBtn').onclick = () => {
   if (opening) updateCalcResult();
 };
 document.getElementById('calcWeight').oninput = updateCalcResult;
+document.getElementById('calcAge').oninput = updateCalcResult;
 
 function saveGoal(){
   const v = parseInt(document.getElementById('goalInput').value);
