@@ -983,7 +983,7 @@ function activeSlotIndex(){
   const pulses = getPulseStates();
   let mostRecentTs = -1, activeIdx = null;
   state.slots.forEach((entries,i)=>{
-    if (entries.length && pulses[i].state==='active'){
+    if (entries.length && (pulses[i].state==='active' || pulses[i].state==='active-met')){
       const latestTs = Math.max(...entries.map(e=>new Date(e.loggedAt).getTime()));
       if (latestTs > mostRecentTs){ mostRecentTs = latestTs; activeIdx = i; }
     }
