@@ -480,6 +480,7 @@
       <div class="daily-total"><span class="val" id="dailyTotal">0</span><span class="of">/ <span id="dailyGoalInline">0</span>g protein today</span></div>
       <div class="daily-left">PROTEIN LEFT<br><b id="dailyLeft">0g</b></div>
     </div>
+    <div id="macroSummary" style="display:none; font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted2); letter-spacing:0.3px; margin:-4px 2px 4px;"></div>
     <div id="pulseHitBadge" style="display:none; font-family:'Space Mono',monospace; font-weight:700; font-size:0.68rem; letter-spacing:0.5px; margin:-6px 2px 4px;"></div>
     <div id="pulseTargetHint" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--muted); letter-spacing:0.5px; margin:-8px 2px 4px;"></div>
     <div id="weekStreak" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:var(--g2); letter-spacing:0.5px; margin:0 2px 14px;"></div>
@@ -1138,6 +1139,80 @@ function getPulseStates(){
 
 function dayTotal(){ return round1(state.slots.reduce((s,_,i)=>s+slotTotal(i),0)); }
 
+// --- Macro (carb/fat/kcal) targets & pacing --------------------------------
+// Rough, self-reported-friendly estimate: not a clinical TDEE calc (no
+// height/sex/activity level collected), so this deliberately stays a wide
+// band, not a precise number, and only activates once bodyweight is known
+// (same gating as the protein-ceiling logic above).
+function dailyMacroTargets(){
+  if (!state.bodyWeightKg) return null;
+  const kcalPerKg = (state.age && state.age >= 60) ? 26 : 30; // light-moderate activity assumption
+  const tdee = Math.round(state.bodyWeightKg * kcalPerKg);
+  const proteinKcal = (state.goal || 0) * 4;
+  const remainingKcal = Math.max(tdee - proteinKcal, Math.round(tdee * 0.3)); // floor so protein-heavy goals don't collapse the rest to ~0
+  const fatKcal = Math.round(remainingKcal * 0.3);
+  const carbKcal = remainingKcal - fatKcal;
+  return {
+    kcal: tdee,
+    fatG: Math.round(fatKcal / 9),
+    carbG: Math.round(carbKcal / 4),
+  };
+}
+
+// Sums only items that actually carry macro data (it's an optional field),
+// and reports how many logged items had it, so callers can bail out on thin data.
+function todaysMacroTotals(){
+  let carbs=0, fat=0, kcal=0, withData=0, loggedItems=0;
+  state.slots.forEach(slot => slot.forEach(item => {
+    loggedItems++;
+    if (item.carbs!=null || item.fat!=null || item.kcal!=null){
+      withData++;
+      carbs += item.carbs || 0;
+      fat += item.fat || 0;
+      kcal += item.kcal || 0;
+    }
+  }));
+  return { carbs: round1(carbs), fat: round1(fat), kcal: Math.round(kcal), loggedItems, withData };
+}
+
+// Pace-aware check: compares how far through the day's pulses we are against
+// how much of the carb/fat budget is already used, rather than only firing
+// at end-of-day when it's too late to act on. Requires at least half of
+// today's logged items to actually carry macro data, so a couple of
+// no-macro entries early on don't produce a false read.
+function macroPaceWarning(){
+  const targets = dailyMacroTargets();
+  if (!targets) return null;
+  const totals = todaysMacroTotals();
+  if (totals.loggedItems === 0 || totals.withData < Math.ceil(totals.loggedItems/2)) return null;
+
+  const pulses = getPulseStates();
+  const pulsesDone = pulses.filter(p=>p.state==='active-met'||p.state==='closed-met'||p.state==='closed-short').length;
+  const expectedFrac = Math.max(pulsesDone, 1) / PULSE_COUNT; // at least 1 pulse's worth, so pulse 1 isn't flagged instantly
+
+  const carbFrac = targets.carbG > 0 ? totals.carbs / targets.carbG : 0;
+  const fatFrac = targets.fatG > 0 ? totals.fat / targets.fatG : 0;
+
+  if (carbFrac - expectedFrac > 0.35 && carbFrac > 0.6){
+    return { type:'over', macro:'carb', amount: totals.carbs, target: targets.carbG };
+  }
+  if (fatFrac - expectedFrac > 0.35 && fatFrac > 0.6){
+    return { type:'over', macro:'fat', amount: totals.fat, target: targets.fatG };
+  }
+  // Under-pace is only worth flagging late in the day — early shortfall is
+  // just normal spacing, not a real gap.
+  const hour = new Date().getHours();
+  if (hour >= 20){
+    if (carbFrac < 0.5 && targets.carbG > 0){
+      return { type:'under', macro:'carb', amount: totals.carbs, target: targets.carbG };
+    }
+    if (fatFrac < 0.5 && targets.fatG > 0){
+      return { type:'under', macro:'fat', amount: totals.fat, target: targets.fatG };
+    }
+  }
+  return null;
+}
+
 // Ported directly from the live app's updateCoach() — same priority order,
 // same messages, same 55g MPS-ceiling warning, same evening wrap-up logic.
 let coachTypeGen = 0;
@@ -1201,6 +1276,7 @@ async function updateCoach(){
     const ceiling = state.bodyWeightKg ? Math.round(state.bodyWeightKg * ceilingMult) : (state.age && state.age >= 60 ? 80 : 55);
     const ceilingLow = state.bodyWeightKg ? Math.round(state.bodyWeightKg * 0.4) : 40;
     const overPulses = pulses.filter(p=>p.total>ceiling && (p.state==='active'||p.state==='active-met'));
+    const mp = macroPaceWarning();
 
     let mostRecentTs=-1, inProgress=null;
     state.slots.forEach((entries,i)=>{
@@ -1235,6 +1311,14 @@ async function updateCoach(){
         ? overPulses[0].name+' is'
         : overPulses.length+' pulses are';
       msg = '⚠️ <strong>'+whichPulse+' over '+ceiling+'g.</strong> Your muscles can only absorb ~'+ceilingLow+'–'+ceiling+'g per meal'+(state.bodyWeightKg?' at your bodyweight':'')+' — '+suggestion+'.';
+    }
+    else if (mp){
+      const label = mp.macro === 'carb' ? 'carbs' : 'fat';
+      if (mp.type === 'over'){
+        msg = '📊 <strong>'+label.charAt(0).toUpperCase()+label.slice(1)+' running high.</strong> You\'re at <strong>'+mp.amount+'g</strong> of an estimated <strong>'+mp.target+'g</strong> for the day, ahead of where your pulses are at — worth lightening up '+label+' for your next meal.';
+      } else {
+        msg = '📊 <strong>Light on '+label+' today.</strong> You\'re at <strong>'+mp.amount+'g</strong> of an estimated <strong>'+mp.target+'g</strong> — not a problem, just worth knowing if energy\'s felt low.';
+      }
     }
     else if (nothingLogged){
       const ico = hour<12?'🌅':hour<17?'⏰':'🌙';
@@ -2127,6 +2211,21 @@ function render(){
   document.getElementById('dailyTotal').textContent = dailyTotal;
   document.getElementById('dailyGoalInline').textContent = state.goal;
   document.getElementById('dailyLeft').textContent = round1(Math.max(0,state.goal-dailyTotal))+'g';
+
+  // Passive carb/fat/kcal line — shown whenever bodyweight is known and at
+  // least one logged item today carries macro data. Purely informational;
+  // the coach bubble above is where an actual warning surfaces.
+  const macroSummaryEl = document.getElementById('macroSummary');
+  if (macroSummaryEl){
+    const mTargets = dailyMacroTargets();
+    const mTotals = todaysMacroTotals();
+    if (mTargets && mTotals.withData > 0){
+      macroSummaryEl.style.display = 'block';
+      macroSummaryEl.textContent = mTotals.carbs+'g / ~'+mTargets.carbG+'g carbs · '+mTotals.fat+'g / ~'+mTargets.fatG+'g fat today (est.)';
+    } else {
+      macroSummaryEl.style.display = 'none';
+    }
+  }
 
   // Today's pulse-completion badge — separate from the raw gram total, so
   // someone whose goal outpaces what their pulse count can reach still sees
