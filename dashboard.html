@@ -1195,6 +1195,9 @@ function todaysMacroTotals(){
 // at end-of-day when it's too late to act on. Requires at least half of
 // today's logged items to actually carry macro data, so a couple of
 // no-macro entries early on don't produce a false read.
+// `severe` marks an overage so large (2x+ the full daily target, regardless
+// of pace) that it should outrank even the protein-ceiling warning — e.g.
+// a single entry that blows through the whole day's carb budget.
 function macroPaceWarning(){
   const targets = dailyMacroTargets();
   if (!targets) return null;
@@ -1209,20 +1212,20 @@ function macroPaceWarning(){
   const fatFrac = targets.fatG > 0 ? totals.fat / targets.fatG : 0;
 
   if (carbFrac - expectedFrac > 0.35 && carbFrac > 0.6){
-    return { type:'over', macro:'carb', amount: totals.carbs, target: targets.carbG };
+    return { type:'over', macro:'carb', amount: totals.carbs, target: targets.carbG, severe: carbFrac >= 2 };
   }
   if (fatFrac - expectedFrac > 0.35 && fatFrac > 0.6){
-    return { type:'over', macro:'fat', amount: totals.fat, target: targets.fatG };
+    return { type:'over', macro:'fat', amount: totals.fat, target: targets.fatG, severe: fatFrac >= 2 };
   }
   // Under-pace is only worth flagging late in the day — early shortfall is
   // just normal spacing, not a real gap.
   const hour = new Date().getHours();
   if (hour >= 20){
     if (carbFrac < 0.5 && targets.carbG > 0){
-      return { type:'under', macro:'carb', amount: totals.carbs, target: targets.carbG };
+      return { type:'under', macro:'carb', amount: totals.carbs, target: targets.carbG, severe: false };
     }
     if (fatFrac < 0.5 && targets.fatG > 0){
-      return { type:'under', macro:'fat', amount: totals.fat, target: targets.fatG };
+      return { type:'under', macro:'fat', amount: totals.fat, target: targets.fatG, severe: false };
     }
   }
   return null;
@@ -1317,6 +1320,13 @@ async function updateCoach(){
 
     if (total>=goal){
       msg = '🏆 <strong>Daily goal reached!</strong> Outstanding — you\'ve given your muscles the best chance to grow today.';
+    }
+    else if (mp && mp.severe){
+      // A severe macro overage (2x+ the whole day's estimated target from
+      // pace alone) outranks the protein-ceiling note below — it's a bigger
+      // miss than one meal running a bit high on protein.
+      const label = mp.macro === 'carb' ? 'carbs' : 'fat';
+      msg = '🚨 <strong>Way over on '+label+' today.</strong> You\'re at <strong>'+mp.amount+'g</strong> against an estimated <strong>'+mp.target+'g</strong> daily target — more than double, from a single entry or two. Worth a look at what got logged.';
     }
     else if (overPulses.length>0){
       const suggestion = state.pulseCount < 4
