@@ -652,6 +652,8 @@
     <div style="font-family:'DM Sans',sans-serif; font-size:0.76rem; color:var(--muted2); margin-bottom:10px; line-height:1.4;">3 fits most people's routine. If your goal is high enough that 3 pulses would each need to exceed what one sitting can use, 4 spreads it further.</div>
     <div class="pulse-select" id="pulseCountSelect" style="margin-bottom:22px;"></div>
 
+    <button class="onboarding-btn" id="manageSubBtn" style="background:var(--surface2); color:var(--text); border:1.5px solid var(--border2); margin-bottom:10px;">Manage subscription</button>
+    <div id="manageSubError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; margin-bottom:10px; min-height:14px;"></div>
     <button class="onboarding-btn" id="signOutBtn" style="background:var(--surface2); color:var(--text); border:1.5px solid var(--border2);">Sign out</button>
   </div>
 </div>
@@ -3840,6 +3842,26 @@ function closeInfoSheet(){
 document.getElementById('infoBtn').onclick = openInfoSheet;
 document.getElementById('infoSheetClose').onclick = closeInfoSheet;
 document.getElementById('infoSheetBackdrop').onclick = closeInfoSheet;
+document.getElementById('manageSubBtn').onclick = async () => {
+  const btn = document.getElementById('manageSubBtn');
+  const errEl = document.getElementById('manageSubError');
+  errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Loading…';
+  try {
+    const { data:{ session } } = await db.auth.getSession();
+    const res = await fetch('https://xcfxizkflleeahjguviq.supabase.co/functions/v1/create-billing-portal-session', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok || !data.url) throw new Error(data.error || 'Could not open billing portal');
+    window.location.href = data.url;
+  } catch (err) {
+    errEl.textContent = err.message || 'Something went wrong — please try again.';
+    btn.disabled = false; btn.textContent = 'Manage subscription';
+  }
+};
+
 document.getElementById('signOutBtn').onclick = async () => {
   await db.auth.signOut();
   window.location.href = 'auth.html';
