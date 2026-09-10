@@ -819,6 +819,21 @@
           <textarea id="typeInNotes" rows="2" placeholder="e.g. Mum's recipe, roughly 2 scoops" style="border:none; outline:none; background:none; font-family:'DM Sans',sans-serif; font-size:0.86rem; color:var(--text); width:100%; resize:vertical; padding:0;"></textarea>
         </div>
       </div>
+      <div style="font-family:'DM Sans',sans-serif; font-size:0.72rem; color:var(--muted); margin:2px 0 12px;">Optional — carbs, fat and calories, shown for information only</div>
+      <div class="row2">
+        <div class="field">
+          <label class="field-label">Carbs</label>
+          <div class="field-input"><input type="number" id="typeInCarbs" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+        </div>
+        <div class="field">
+          <label class="field-label">Fat</label>
+          <div class="field-input"><input type="number" id="typeInFat" inputmode="decimal" placeholder="—"><span class="unit">g</span></div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Calories</label>
+        <div class="field-input"><input type="number" id="typeInKcal" inputmode="decimal" placeholder="—"><span class="unit">kcal</span></div>
+      </div>
       <span class="log-time-toggle" id="typeInTimeToggle" style="font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted2); cursor:pointer; letter-spacing:0.5px; display:inline-block; margin:2px 0 8px;">🕐 LOGGING NOW · TAP TO BACKDATE</span>
       <div id="typeInTimePicker" style="display:none; gap:6px; align-items:center; margin-bottom:8px;">
         <input type="time" id="typeInTimeInput" style="font-family:'Space Mono',monospace; background:var(--surface2); border:1px solid var(--border2); color:var(--text); border-radius:6px; padding:7px 9px; font-size:0.76rem;">
@@ -3458,10 +3473,16 @@ function confirmTypeIn(){
   const name = document.getElementById('typeInName').value.trim() || 'Custom meal';
   const grams = parseFloat(document.getElementById('typeInGrams').value) || 0;
   const protein = round1(parseFloat(document.getElementById('typeInProtein').value) || 0);
+  const carbsVal = document.getElementById('typeInCarbs').value;
+  const fatVal = document.getElementById('typeInFat').value;
+  const kcalVal = document.getElementById('typeInKcal').value;
+  const carbs = carbsVal!=='' ? round1(parseFloat(carbsVal)) : null;
+  const fat = fatVal!=='' ? round1(parseFloat(fatVal)) : null;
+  const kcal = kcalVal!=='' ? Math.round(parseFloat(kcalVal)) : null;
   const noteVal = document.getElementById('typeInNotes').value.trim();
   if (noteVal) state.foodNotes[name.toLowerCase()] = noteVal;
   else delete state.foodNotes[name.toLowerCase()];
-  resolveLogTime(pendingSlot, { name, icon:'🍽️', grams, protein, id:'custom-'+Date.now(), p100: null }, 'typeInTimeDecision');
+  resolveLogTime(pendingSlot, { name, icon:'🍽️', grams, protein, carbs, fat, kcal, id:'custom-'+Date.now(), p100: null }, 'typeInTimeDecision');
 }
 
 // --- Real meal scan — calls the same Supabase Edge Function the live app uses ---
@@ -3955,7 +3976,7 @@ document.getElementById('backToMethodFromPhotoChoice').onclick = () => showStep(
 document.getElementById('btnAddFoodTile').onclick = openAddFood;
 document.getElementById('btnFavourites').onclick = () => { showStep('stepFavourites','Favourites'); renderFavourites(); };
 document.getElementById('btnSearchDb').onclick = () => { showStep('stepSearch','Search foods'); document.getElementById('foodSearchInput').value=''; renderFoodResults(''); document.getElementById('foodSearchInput').focus(); };
-document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; document.getElementById('estimateTypeInNote').style.display='none'; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
+document.getElementById('btnTypeIn').onclick = () => { showStep('stepTypeIn','Type it in'); document.getElementById('typeInName').value=''; document.getElementById('typeInGrams').value=150; document.getElementById('typeInProtein').value=0; document.getElementById('typeInNotes').value=''; document.getElementById('typeInCarbs').value=''; document.getElementById('typeInFat').value=''; document.getElementById('typeInKcal').value=''; document.getElementById('typeInTimeDecision').innerHTML=''; document.getElementById('estimateTypeInNote').style.display='none'; buildPulseSelect('pulseSelectTypeIn', () => buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput')); buildBackdateToggle('typeInTimeToggle','typeInTimePicker','typeInTimeInput'); };
 
 async function estimateTypeInProtein(){
   const name = document.getElementById('typeInName').value.trim();
@@ -3994,6 +4015,9 @@ async function estimateTypeInProtein(){
     if (e.p100 != null){
       document.getElementById('typeInProtein').value = round1((e.p100/100) * grams);
     }
+    if (e.c100 != null) document.getElementById('typeInCarbs').value = round1((e.c100/100) * grams);
+    if (e.f100 != null) document.getElementById('typeInFat').value = round1((e.f100/100) * grams);
+    if (e.kcal100 != null) document.getElementById('typeInKcal').value = Math.round((e.kcal100/100) * grams);
 
     noteEl.style.display = 'block';
     noteEl.style.color = 'var(--muted2)';
