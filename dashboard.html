@@ -3407,6 +3407,9 @@ function startScan(fileInputEl){
         name: f.name,
         grams: f.portionG || 0,
         protein: round1(f.proteinG || 0),
+        carbs: f.carbsG!=null ? round1(f.carbsG) : null,
+        fat: f.fatG!=null ? round1(f.fatG) : null,
+        kcal: f.kcal!=null ? Math.round(f.kcal) : null,
         confidence: f.confidence || null,
         uncertain: f.confidence === 'low',
         lowProtein: (f.proteinG || 0) < 3,
@@ -3440,6 +3443,11 @@ function renderScanItems(){
         <div class="mock-item-field"><label>Portion</label><div class="mock-item-field-input"><input type="number" value="${item.grams}" oninput="scanItems[${idx}].grams=parseFloat(this.value)||0; updateScanTotal();"><span class="unit">g</span></div></div>
         <div class="mock-item-field"><label>Protein</label><div class="mock-item-field-input"><input type="number" value="${item.protein}" oninput="scanItems[${idx}].protein=parseFloat(this.value)||0; updateScanTotal();"><span class="unit">g</span></div></div>
       </div>
+      <div class="mock-item-row">
+        <div class="mock-item-field"><label>Carbs</label><div class="mock-item-field-input"><input type="number" value="${item.carbs!=null?item.carbs:''}" placeholder="—" oninput="scanItems[${idx}].carbs=this.value!==''?parseFloat(this.value):null;"><span class="unit">g</span></div></div>
+        <div class="mock-item-field"><label>Fat</label><div class="mock-item-field-input"><input type="number" value="${item.fat!=null?item.fat:''}" placeholder="—" oninput="scanItems[${idx}].fat=this.value!==''?parseFloat(this.value):null;"><span class="unit">g</span></div></div>
+        <div class="mock-item-field"><label>Calories</label><div class="mock-item-field-input"><input type="number" value="${item.kcal!=null?item.kcal:''}" placeholder="—" oninput="scanItems[${idx}].kcal=this.value!==''?parseInt(this.value):null;"><span class="unit">kcal</span></div></div>
+      </div>
     </div>`).join('') || `<div class="empty-state">No items — add manually or retake the photo.</div>`;
 }
 
@@ -3470,11 +3478,18 @@ function confirmScan(){
   if (combine){
     const suggestedName = scanItems.map(i=>i.name).filter(Boolean).join(', ');
     const combinedName = document.getElementById('combineScanName').value.trim() || suggestedName || 'Combined meal';
+    const grams = round1(scanItems.reduce((s,i)=>s+(i.grams||0),0));
+    const carbs = scanItems.some(i=>i.carbs!=null) ? round1(scanItems.reduce((s,i)=>s+(i.carbs||0),0)) : null;
+    const fat = scanItems.some(i=>i.fat!=null) ? round1(scanItems.reduce((s,i)=>s+(i.fat||0),0)) : null;
+    const kcal = scanItems.some(i=>i.kcal!=null) ? Math.round(scanItems.reduce((s,i)=>s+(i.kcal||0),0)) : null;
     entries = [{
       name: combinedName,
       icon: scanItems[0]?.icon || '🍽️',
-      grams: round1(scanItems.reduce((s,i)=>s+(i.grams||0),0)),
+      grams,
       protein: round1(scanItems.reduce((s,i)=>s+(i.protein||0),0)),
+      carbs, fat, kcal,
+      c100: (carbs!=null && grams>0) ? round1((carbs/grams)*100) : null,
+      f100: (fat!=null && grams>0) ? round1((fat/grams)*100) : null,
       id: 'scan-'+Date.now()+'-'+Math.random(),
       p100: null,
       note: mealNote,
@@ -3485,6 +3500,11 @@ function confirmScan(){
       icon: item.icon,
       grams: item.grams,
       protein: round1(item.protein),
+      carbs: item.carbs!=null ? round1(item.carbs) : null,
+      fat: item.fat!=null ? round1(item.fat) : null,
+      kcal: item.kcal!=null ? Math.round(item.kcal) : null,
+      c100: (item.carbs!=null && item.grams>0) ? round1((item.carbs/item.grams)*100) : null,
+      f100: (item.fat!=null && item.grams>0) ? round1((item.fat/item.grams)*100) : null,
       id: 'scan-'+Date.now()+'-'+Math.random(),
       p100: null,
       note: mealNote, // one note applied to every item from this scan (private to this log, not the shared by-name notes)
