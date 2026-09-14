@@ -1509,6 +1509,7 @@ let stripePaymentElementInstance = null;
 let stripeExpressCheckoutInstance = null;
 let paymentFormReady = false;
 let currentSetupIntentSecret = null;
+let currentIntentType = 'setup'; // 'setup' | 'payment' — which kind of Stripe intent we're confirming
 // Set when the free onboarding (goal-setting etc.) completes before an
 // account exists yet (the new pre-auth flow) — tells continueInitAfterGate()
 // to persist the already-collected goal instead of running onboarding again.
@@ -1551,10 +1552,11 @@ document.getElementById('gateGoogleBtn').onclick = async () => {
   if (error) document.getElementById('gateAuthError').textContent = error.message;
 };
 
-async function mountStripePaymentElement(clientSecret){
+async function mountStripePaymentElement(clientSecret, intentType){
   if (!stripeClient) stripeClient = Stripe(STRIPE_PUBLISHABLE_KEY);
   paymentFormReady = false;
   currentSetupIntentSecret = clientSecret;
+  currentIntentType = intentType || 'setup';
 
   // A retry after a failed attempt was mounting a second payment element
   // on top of the first. Manually clearing the container's DOM (innerHTML)
@@ -1626,7 +1628,7 @@ async function beginTrialCheckout(){
       return false;
     }
     errEl.textContent = 'Loading card form…';
-    await mountStripePaymentElement(data.clientSecret);
+    await mountStripePaymentElement(data.clientSecret, data.intentType);
     errEl.textContent = '';
     return true;
   } catch (e) {
@@ -1658,6 +1660,18 @@ function withTimeout(promise, ms, label){
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+// Retrieves whichever intent type this checkout is actually using, normalized
+// to a plain {status} shape so callers don't need to branch on setupIntent vs
+// paymentIntent themselves.
+async function retrieveCurrentIntent(){
+  if (currentIntentType === 'payment'){
+    const { paymentIntent } = await stripeClient.retrievePaymentIntent(currentSetupIntentSecret);
+    return paymentIntent;
+  }
+  const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
+  return setupIntent;
+}
+
 async function confirmTrialCheckout(){
   const errEl = document.getElementById('gatePaymentError');
   errEl.textContent = '';
@@ -1667,32 +1681,43 @@ async function confirmTrialCheckout(){
   btn.disabled = true; btn.textContent = 'Starting trial…';
   errEl.textContent = 'Confirming your card…';
 
+  // Which Stripe call to make depends entirely on which kind of intent the
+  // backend handed us: a trial-eligible customer gets a bare SetupIntent (no
+  // charge yet); a customer with prior billing history isn't trial-eligible,
+  // so Stripe charges the first invoice immediately via a PaymentIntent
+  // instead. Confirming the wrong kind against the wrong Stripe call is what
+  // previously surfaced as "No setup intent returned from Stripe".
+  const confirmFn = currentIntentType === 'payment'
+    ? stripeClient.confirmPayment.bind(stripeClient)
+    : stripeClient.confirmSetup.bind(stripeClient);
+
   let error;
   try {
     ({ error } = await withTimeout(
-      stripeClient.confirmSetup({
+      confirmFn({
         elements: stripeElements,
         confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
       }),
       // 15s was too aggressive: a 3D Secure authentication challenge (bank
       // app approval, SMS code entry, etc.) can legitimately take longer,
-      // and confirmSetup() doesn't resolve until it's done. Giving up early
-      // here doesn't cancel the real confirmation in progress -- it was
-      // repeatedly observed to succeed seconds later regardless.
+      // and confirmSetup()/confirmPayment() don't resolve until it's done.
+      // Giving up early here doesn't cancel the real confirmation in
+      // progress -- it was repeatedly observed to succeed seconds later
+      // regardless.
       45000,
       'Payment confirmation'
     ));
   } catch (e) {
-    console.error('confirmSetup failed or timed out:', e);
+    console.error('confirm failed or timed out:', e);
     // A timeout here doesn't necessarily mean it actually failed -- check
-    // the real SetupIntent status before giving up, same as the error-object
+    // the real intent status before giving up, same as the error-object
     // handling below. Only show a hard failure if it genuinely isn't done.
     if (e.message && e.message.includes('timed out') && currentSetupIntentSecret){
       errEl.textContent = 'Still confirming your card…';
       try {
-        const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
-        if (setupIntent && setupIntent.status === 'succeeded'){
+        const intent = await retrieveCurrentIntent();
+        if (intent && intent.status === 'succeeded'){
           error = undefined; // fall through to the polling loop below as a success
         } else {
           errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
@@ -1700,7 +1725,7 @@ async function confirmTrialCheckout(){
           return false;
         }
       } catch (e2) {
-        console.error('retrieveSetupIntent after timeout failed:', e2);
+        console.error('retrieve intent after timeout failed:', e2);
         errEl.textContent = 'Payment confirmation timed out — your connection may be dropping the response. Try switching networks and try again.';
         btn.disabled = false; btn.textContent = 'Subscribe';
         return false;
@@ -1713,20 +1738,21 @@ async function confirmTrialCheckout(){
   }
 
   if (error){
-    // confirmSetup()'s returned error is not reliable in this flow — it has
-    // now been observed to report both 'processing_error' and
-    // 'invalid_request_error' (likely tied to the 3DS authentication step)
-    // on attempts that Stripe's webhook later confirms actually succeeded.
-    // Rather than trying to guess which specific error.type is trustworthy,
-    // always verify the real SetupIntent status before showing any error —
-    // a genuine decline/invalid-input still fails this check (status will be
-    // e.g. 'requires_payment_method', not 'succeeded'), so this can't mask
-    // an actual failure, only false negatives.
+    // confirmSetup()/confirmPayment()'s returned error is not reliable in
+    // this flow — it has now been observed to report both
+    // 'processing_error' and 'invalid_request_error' (likely tied to the
+    // 3DS authentication step) on attempts that Stripe's webhook later
+    // confirms actually succeeded. Rather than trying to guess which
+    // specific error.type is trustworthy, always verify the real intent
+    // status before showing any error — a genuine decline/invalid-input
+    // still fails this check (status will be e.g.
+    // 'requires_payment_method', not 'succeeded'), so this can't mask an
+    // actual failure, only false negatives.
     if (currentSetupIntentSecret){
       errEl.textContent = 'Confirming your card…';
       try {
-        const { setupIntent } = await stripeClient.retrieveSetupIntent(currentSetupIntentSecret);
-        if (setupIntent && setupIntent.status === 'succeeded'){
+        const intent = await retrieveCurrentIntent();
+        if (intent && intent.status === 'succeeded'){
           // It actually went through — fall through to the polling loop
           // below instead of showing a false decline.
         } else {
@@ -1735,7 +1761,7 @@ async function confirmTrialCheckout(){
           return false;
         }
       } catch (e) {
-        console.error('retrieveSetupIntent failed:', e);
+        console.error('retrieve intent failed:', e);
         errEl.textContent = error.message || 'Card declined — try another card.';
         btn.disabled = false; btn.textContent = 'Subscribe';
         return false;
