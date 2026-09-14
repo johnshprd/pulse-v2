@@ -1767,6 +1767,16 @@ document.getElementById('gateNextBtn').onclick = async () => {
     if (result.error){ errEl.textContent = result.error.message; return; }
     currentUser = result.data.user;
 
+    if (gateMode === 'signup'){
+      trackOnboarding('account_created');
+      // Backfill this device's earlier pre-auth events with the real
+      // user_id, so the whole funnel for one person can be traced by
+      // either anon_id or user_id.
+      db.from('onboarding_events').update({ user_id: currentUser.id })
+        .eq('anon_id', getAnonId()).is('user_id', null)
+        .then(() => {}, () => {});
+    }
+
     // Card-free trial (7 Sept 2026): a brand new account is always within
     // its own 7-day trial window (checkSubscription() grants access purely
     // from account-creation date, no Stripe subscription needed yet), so
@@ -2019,6 +2029,32 @@ async function continueInitAfterGate(){
   subscribeToPush();
 }
 
+// --- Onboarding funnel tracking ---
+// Fires a lightweight event row so we can see where signups actually drop
+// off, not just whether they finish. Runs pre-auth, so events are keyed to
+// an anonymous device id (localStorage) rather than a user_id; once the
+// real account exists, later events (and a backfill) carry user_id too.
+function getAnonId(){
+  let id = localStorage.getItem('pulse_anon_id');
+  if (!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : 'anon-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+    localStorage.setItem('pulse_anon_id', id);
+  }
+  return id;
+}
+async function trackOnboarding(step){
+  try {
+    await db.from('onboarding_events').insert({
+      anon_id: getAnonId(),
+      user_id: currentUser ? currentUser.id : null,
+      step
+    });
+  } catch (e) {
+    // Never let analytics break onboarding itself.
+    console.warn('trackOnboarding failed', e);
+  }
+}
+
 // --- First-run onboarding — shown once, only when no user_data row exists yet ---
 let onboardingStep = 0;
 const ONBOARDING_STEPS = 3;
@@ -2040,6 +2076,7 @@ function startOnboarding(){
   document.getElementById('obResult').style.display = 'none';
   updateOnboardingUI();
   document.getElementById('onboardingOverlay').classList.add('open');
+  trackOnboarding('step_0_welcome_viewed');
 }
 
 function updateOnboardingUI(){
@@ -2179,18 +2216,23 @@ async function finishOnboarding(goalValue){
   render();
 }
 
+const ONBOARDING_STEP_NAMES = ['step_0_welcome_viewed', 'step_1_pulses_demo_viewed', 'step_2_goal_calculator_viewed'];
+
 document.getElementById('onboardingNextBtn').onclick = () => {
   if (onboardingStep === ONBOARDING_STEPS - 1){
     // Final step — the calculator sets obComputed if it was used; otherwise
     // finishOnboarding() falls back to the 150g default itself.
+    trackOnboarding(obComputed ? 'goal_set' : 'goal_skipped_default_used');
     finishOnboarding();
     return;
   }
   onboardingStep++;
   updateOnboardingUI();
+  trackOnboarding(ONBOARDING_STEP_NAMES[onboardingStep]);
 };
 
 document.getElementById('onboardingSkipBtn').onclick = () => {
+  trackOnboarding('skipped_at_step_' + onboardingStep);
   finishOnboarding();
 };
 
