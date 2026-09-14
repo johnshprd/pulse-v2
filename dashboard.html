@@ -448,6 +448,7 @@
       <div class="onboarding-kicker">Step 02 / 02</div>
       <div class="onboarding-title">Your free week's up</div>
       <div class="onboarding-body" style="margin-bottom:14px;">Add a card to keep going — £4.99/mo, cancel any time. Your data and progress are all still here.</div>
+      <div id="stripeExpressCheckout" style="width:100%; margin-bottom:10px;"></div>
       <div id="stripePaymentElement" style="width:100%; min-height:220px;"></div>
       <div id="gatePaymentError" style="font-family:'Space Mono',monospace; font-size:0.68rem; color:#dc2626; min-height:14px; margin-top:8px;"></div>
     </div>
@@ -1505,6 +1506,7 @@ let gateMode = 'signup'; // 'signup' | 'signin'
 let stripeClient = null;
 let stripeElements = null;
 let stripePaymentElementInstance = null;
+let stripeExpressCheckoutInstance = null;
 let paymentFormReady = false;
 let currentSetupIntentSecret = null;
 // Set when the free onboarding (goal-setting etc.) completes before an
@@ -1564,10 +1566,23 @@ async function mountStripePaymentElement(clientSecret){
     try { stripePaymentElementInstance.unmount(); } catch (e) { /* already gone */ }
     stripePaymentElementInstance = null;
   }
+  if (stripeExpressCheckoutInstance) {
+    try { stripeExpressCheckoutInstance.unmount(); } catch (e) { /* already gone */ }
+    stripeExpressCheckoutInstance = null;
+  }
 
   stripeElements = stripeClient.elements({ clientSecret });
   stripePaymentElementInstance = stripeElements.create('payment');
   stripePaymentElementInstance.mount('#stripePaymentElement');
+
+  // One-tap Google Pay / Apple Pay button, shown above the card form when
+  // the device/browser has a wallet available — falls back to nothing
+  // (element just stays empty) on devices without one, so it's always
+  // safe to mount. Reuses the same Elements instance and the existing
+  // confirmTrialCheckout() retry/polling logic rather than duplicating it.
+  stripeExpressCheckoutInstance = stripeElements.create('expressCheckout');
+  stripeExpressCheckoutInstance.mount('#stripeExpressCheckout');
+  stripeExpressCheckoutInstance.on('confirm', () => confirmTrialCheckout());
 
   // mount() returns as soon as it's called — it does NOT wait for Stripe's
   // iframe to actually finish loading and become interactive. Without
